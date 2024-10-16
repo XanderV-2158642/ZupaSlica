@@ -1,5 +1,8 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
 
 #include <iostream>
 
@@ -56,6 +59,24 @@ int main()
         return -1;
     }
 
+    Assimp::Importer importer;
+
+    // Path to a test model (replace this with a valid path)
+    const std::string modelPath = "/home/xandervaes/Code/ZupaSlica/school_stuff/COFAB-models-set1/COFAB-models-set1/cube.stl";
+
+    // Load the model
+    const aiScene* scene = importer.ReadFile(modelPath, aiProcess_Triangulate);
+
+    // Check if the import was successful
+    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
+        std::cerr << "Error importing model: " << importer.GetErrorString() << std::endl;
+        return -1;
+    }
+
+    // Print basic information about the model
+    std::cout << "Model loaded successfully!" << std::endl;
+    std::cout << "Number of meshes: " << scene->mNumMeshes << std::endl;
+    std::cout << "Number of materials: " << scene->mNumMaterials << std::endl;
 
     // build and compile our shader program
     // ------------------------------------
