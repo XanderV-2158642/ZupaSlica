@@ -55,6 +55,9 @@ public:
 
     // processes input received from a mouse scroll-wheel event. Only requires input on the vertical wheel-axis
     void ProcessMouseScroll(float yoffset);
+
+    void RotateAroundPointHorizontal(glm::vec3 point, float angle);
+    void RotateAroundPointVertical(glm::vec3 point, float angle);
 private:
     // calculates the front vector from the Camera's (updated) Euler Angles
     void updateCameraVectors();
@@ -101,10 +104,12 @@ void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constr
     xoffset *= MouseSensitivity;
     yoffset *= MouseSensitivity;
 
-    Yaw += xoffset;
-    Pitch += yoffset;
+    //make sure that the camera rotates around the point where it is looking at
+    //this also means the distance to origin will be kept constant
 
-    // make sure that when pitch is out of bounds, screen doesn't get flipped
+    RotateAroundPointHorizontal(glm::vec3(0.0f,0.0f,0.0f), xoffset);
+    RotateAroundPointVertical(glm::vec3(0.0f,0.0f,0.0f), yoffset);
+
     if (constrainPitch)
     {
         if (Pitch > 89.0f)
@@ -113,18 +118,17 @@ void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constr
             Pitch = -89.0f;
     }
 
-    // update Front, Right and Up Vectors using the updated Euler angles
-    updateCameraVectors();
+    if (Yaw > 360.0f)
+        Yaw = 0.0f;
+    
+    if (Yaw < 0.0f)
+        Yaw = 360.0f;
+
 }
 
 void Camera::ProcessMouseScroll(float yoffset)
 {
-    if (Zoom >= 1.0f && Zoom <= 45.0f)
-        Zoom -= yoffset;
-    if (Zoom <= 1.0f)
-        Zoom = 1.0f;
-    if (Zoom >= 45.0f)
-        Zoom = 45.0f;
+    Position += Front * yoffset * 0.1f;
 }
 
 void Camera::updateCameraVectors()
@@ -140,6 +144,26 @@ void Camera::updateCameraVectors()
     Up = glm::normalize(glm::cross(Right, Front));
 }
 
+
+void Camera::RotateAroundPointHorizontal(glm::vec3 point, float angle)
+{
+    glm::vec3 direction = Position - glm::vec3(point.x,Position.y,point.z);
+    glm::vec3 rotated = glm::rotate(glm::mat4(1.0f), glm::radians(angle), Up) * glm::vec4(direction, 1.0f);
+    Position = glm::vec3(point.x,Position.y,point.z) + rotated;
+
+    //make camera look at point
+    Front = glm::normalize(glm::vec3(point.x,point.y,point.z) - Position);
+}
+
+void Camera::RotateAroundPointVertical(glm::vec3 point, float angle)
+{
+    glm::vec3 direction = Position - glm::vec3(point.x,point.y,point.z);
+    glm::vec3 rotated = glm::rotate(glm::mat4(1.0f), glm::radians(angle), Right) * glm::vec4(direction, 1.0f);
+    Position = point + rotated;
+
+    //make camera look at point
+    Front = glm::normalize(point - Position);
+}
 
 #endif
 

@@ -7,8 +7,25 @@ link_directories(/home/xandervaes/dev/assimp/bin)
 
 set(LIBS glfw assimp)
 
+set(IMGUI include/imgui/imgui.cpp
+           include/imgui/imgui_demo.cpp
+           include/imgui/imgui_draw.cpp
+           include/imgui/imgui_impl_glfw.cpp
+           include/imgui/imgui_impl_opengl3.cpp
+           include/imgui/imgui_widgets.cpp
+           include/imgui/imgui_tables.cpp
+           include/imgui/imconfig.h
+           include/imgui/imgui_impl_glfw.h
+           include/imgui/imgui_impl_opengl3_loader.h
+           include/imgui/imgui_impl_opengl3.h
+           include/imgui/imgui_internal.h
+           include/imgui/imgui.h
+           include/imgui/imstb_rectpack.h
+           include/imgui/imstb_textedit.h
+           include/imgui/imstb_truetype.h)
 
-add_executable(ZupaSlica src/main.cpp src/libs/glad.c)
+
+add_executable(ZupaSlica src/main.cpp src/libs/glad.c ${IMGUI} src/FrameBuffer/FrameBuffer.cpp)
 
 
 target_include_directories(ZupaSlica PRIVATE ${ZupaSlica_SOURCE_DIR}/include)
