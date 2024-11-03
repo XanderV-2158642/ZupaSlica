@@ -41,7 +41,7 @@ int main()
 
     // glfw window creation
     // --------------------
-    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "ZupaSlica", NULL, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -58,25 +58,6 @@ int main()
         std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
-
-    Assimp::Importer importer;
-
-    // Path to a test model (replace this with a valid path)
-    const std::string modelPath = "/home/xandervaes/Code/ZupaSlica/school_stuff/COFAB-models-set1/COFAB-models-set1/cube.stl";
-
-    // Load the model
-    const aiScene* scene = importer.ReadFile(modelPath, aiProcess_Triangulate);
-
-    // Check if the import was successful
-    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
-        std::cerr << "Error importing model: " << importer.GetErrorString() << std::endl;
-        return -1;
-    }
-
-    // Print basic information about the model
-    std::cout << "Model loaded successfully!" << std::endl;
-    std::cout << "Number of meshes: " << scene->mNumMeshes << std::endl;
-    std::cout << "Number of materials: " << scene->mNumMaterials << std::endl;
 
     // build and compile our shader program
     // ------------------------------------
@@ -124,7 +105,7 @@ int main()
         -0.5f, -0.5f, 0.0f, // left  
          0.5f, -0.5f, 0.0f, // right 
          0.0f,  0.5f, 0.0f  // top   
-    }; 
+    };
 
     unsigned int VBO, VAO;
     glGenVertexArrays(1, &VAO);
@@ -159,7 +140,7 @@ int main()
 
         // render
         // ------
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClearColor(0.78f, 0.98f, 0.83f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
         // draw our first triangle

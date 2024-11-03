@@ -8,7 +8,7 @@ link_directories(/home/xandervaes/dev/assimp/bin)
 set(LIBS glfw assimp)
 
 
-add_executable(ZupaSlica src/main.cpp src/glad.c)
+add_executable(ZupaSlica src/main.cpp src/libs/glad.c)
 
 
 target_include_directories(ZupaSlica PRIVATE ${ZupaSlica_SOURCE_DIR}/include)
