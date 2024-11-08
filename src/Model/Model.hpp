@@ -14,7 +14,7 @@
 #include <assimp/postprocess.h>
 
 #include "../Mesh/Mesh.hpp"
-#include "../Shaders/Shader.hpp"
+#include "../Shader/Shader.hpp"
 
 #include <string>
 #include <fstream>

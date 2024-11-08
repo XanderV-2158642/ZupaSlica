@@ -1,7 +1,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
-#include "Shaders/Shader.hpp"
+#include "Shader/Shader.hpp"
 #include <filesystem>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -13,7 +13,10 @@
 #include <imgui/imgui_impl_opengl3.h>
 #include "FrameBuffer/FrameBuffer.hpp"
 #include "Buildplate/Buildplate.hpp"
+#include "DrawSTL/DrawSTL.hpp"
+#include "SlicingPlane/SlicingPlane.hpp"
 #include <clipper2/clipper.h>
+#include "SlicerSettings/SlicerSettings.hpp"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
@@ -36,8 +39,10 @@ float lastFrame = 0.0f;
 
 bool rescale = false;
 
+
 int main()
 {
+    Clipper2Lib::TestLib::Test();
     // glfw: initialize and configure
     // ------------------------------
     glfwInit();
@@ -80,16 +85,21 @@ int main()
     // configure global opengl state
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     // build and compile our shader program
     // ------------------------------------
     Shader BuildplateShader("/home/xandervaes/Code/ZupaSlica/src/ShaderFiles/BuildplateShader.vs", "/home/xandervaes/Code/ZupaSlica/src/ShaderFiles/BuildplateShader.fs");
+    Shader slicingPlaneShader("/home/xandervaes/Code/ZupaSlica/src/ShaderFiles/SlicingPlaneShader.vs", "/home/xandervaes/Code/ZupaSlica/src/ShaderFiles/SlicingPlaneShader.fs");
     Shader objectShader("/home/xandervaes/Code/ZupaSlica/src/ShaderFiles/ObjectShader.vs", "/home/xandervaes/Code/ZupaSlica/src/ShaderFiles/ObjectShader.fs");
 
 
     //Setup environment
     glm::mat4 model = glm::mat4(1.0f);
     Mesh buildPlate = Mesh(Buildplate::GetVertices(), Buildplate::GetIndices(), std::vector<Texture>());
+
+    SlicingPlane slicingPlane = SlicingPlane(slicingPlaneShader);
 
     // load models
     // -----------
@@ -98,6 +108,8 @@ int main()
     // uncomment this call to draw in wireframe polygons.
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
+    printf("Amount of meshes: %d\n", ourModel.meshes.size());
+    
 
 
     //imgui
@@ -111,6 +123,8 @@ int main()
     ImGui_ImplOpenGL3_Init("#version 460");
 
     FrameBuffer sceneBuffer(SCR_WIDTH, SCR_HEIGHT);
+
+    SlicerSettings slicerSettings = SlicerSettings();
 
     // render loop
     // -----------
@@ -136,7 +150,7 @@ int main()
 
         // render
         // ------
-        glClearColor(0.80f, 1.0f, 0.80f, 1.0f);
+        glClearColor(0.0, 0.10f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // also clear the depth buffer now!glClear(GL_COLOR_BUFFER_BIT);
 
         //projection and view matrix
@@ -145,47 +159,15 @@ int main()
         
 
         //buildplate
-        BuildplateShader.use();
-        //light properties
-        BuildplateShader.setVec3("objectColor", 0.8f, 0.8f, 0.7f);
-        BuildplateShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
-        BuildplateShader.setVec3("lightPos", camera.Position);
-        BuildplateShader.setVec3("viewPos", camera.Position);
+        Buildplate::Draw(BuildplateShader, buildPlate, view, projection, camera);
 
-        BuildplateShader.setMat4("view", view);
-        BuildplateShader.setMat4("projection", projection);
+        //object
+        DrawSTL::Draw(objectShader, ourModel, view, projection, camera);
 
-        model = glm::mat4(1.0f);
-        //scale to buildplate dimensions
-        //dimension for ender3 buildplate: 22x22
-        model = glm::scale(model, glm::vec3(22.0f, 1.0f, 22.0f));
-        BuildplateShader.setMat4("model", model);
+        //slice plane (draw last because it is transparent)
+        slicingPlane.SetPosition(glm::vec3(0.0f, slicerSettings.GetSlicingPlaneHeight(), 0.0f));
+        slicingPlane.Draw(view, projection, camera);
 
-        buildPlate.Draw(BuildplateShader);
-
-
-
-        // be sure to activate shader when setting uniforms/drawing objects
-        objectShader.use();
-
-        // light properties
-        objectShader.setVec3("viewPos", camera.Position);
-        objectShader.setVec3("lightPos", camera.Position);
-        objectShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
-        objectShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
-
-        // view/projection transformations
-        objectShader.setMat4("projection", projection);
-        objectShader.setMat4("view", view);
-
-        // render the loaded model
-        model = glm::mat4(1.0f);
-        //model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
-        model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-        model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));	// it's a bit too big for our scene, so scale it down
-        objectShader.setMat4("model", model);
-
-        ourModel.Draw(objectShader);
         sceneBuffer.Unbind();
         
 
@@ -204,21 +186,7 @@ int main()
                                              ImGuiWindowFlags_NoBringToFrontOnFocus |
                                              ImGuiWindowFlags_NoNavFocus);
         
-        //add menu to docking window to disable the docking
-        if (ImGui::BeginMenuBar())
-        {
-            if (ImGui::BeginMenu("Docking"))
-            {
-                if (ImGui::MenuItem("Disable Docking"))
-                {
-                    io.ConfigFlags &= ~ImGuiConfigFlags_DockingEnable;
-                }
-                ImGui::EndMenu();
-            }
-            ImGui::EndMenuBar();
-        }
         
-
         // Dockspace ID - unique identifier for the dockspace
         ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
 
@@ -226,18 +194,14 @@ int main()
         ImGui::DockSpace(dockspace_id, ImVec2(0, 0), 0);
 
         
-
         // render your GUI
         ImGui::Begin("Inputs");
-        //get aspect ratio
-        float aspect = (float)SCR_WIDTH / (float)SCR_HEIGHT;
-        ImGui::Text("Aspect ratio: %f", aspect);
-        ImGui::Text("Camera position: %f, %f, %f", camera.Position.x, camera.Position.y, camera.Position.z);
-        ImGui::Text("xoffset: %f, yoffset: %f", lastX, lastY);
-
-        //distance of camera to origin
-        float distance = glm::length(camera.Position);
-        ImGui::Text("Distance to origin: %f", distance);
+        {
+            //slicing plane height
+            float slicingPlaneHeight = slicerSettings.GetSlicingPlaneHeight();
+            ImGui::SliderFloat("Slicing plane height", &slicingPlaneHeight, 0.0f, 25.0f);
+            slicerSettings.SetSlicingPlaneHeight(slicingPlaneHeight);
+        } 
         ImGui::End();
 
         
@@ -254,8 +218,8 @@ int main()
                 ImVec2(0, 1), 
                 ImVec2(1, 0)
             );
+            ImGui::EndChild();
         }
-        ImGui::EndChild();
         ImGui::End();
 
         ImGui::End();
