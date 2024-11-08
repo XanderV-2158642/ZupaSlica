@@ -24,8 +24,12 @@ set(IMGUI include/imgui/imgui.cpp
            include/imgui/imstb_textedit.h
            include/imgui/imstb_truetype.h)
 
+set(CLIPPER include/clipper2/src/clipper.engine.cpp
+            include/clipper2/src/clipper.offset.cpp
+            include/clipper2/src/clipper.rectclip.cpp)
 
-add_executable(ZupaSlica src/main.cpp src/libs/glad.c ${IMGUI} src/FrameBuffer/FrameBuffer.cpp)
+
+add_executable(ZupaSlica src/main.cpp src/libs/glad.c ${IMGUI} src/FrameBuffer/FrameBuffer.cpp ${CLIPPER})
 
 
 target_include_directories(ZupaSlica PRIVATE ${ZupaSlica_SOURCE_DIR}/include)

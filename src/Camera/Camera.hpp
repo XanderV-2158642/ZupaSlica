@@ -70,6 +70,7 @@ Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch) : Front
     Yaw = yaw;
     Pitch = pitch;
     updateCameraVectors();
+    Front = glm::normalize(glm::vec3(0.0f,0.0f,0.0f) - Position);
 }
 
 Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
@@ -79,6 +80,7 @@ Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float u
     Yaw = yaw;
     Pitch = pitch;
     updateCameraVectors();
+    Front = glm::normalize(glm::vec3(0.0f,0.0f,0.0f) - Position);
 }
 
 glm::mat4 Camera::GetViewMatrix()
@@ -128,7 +130,7 @@ void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constr
 
 void Camera::ProcessMouseScroll(float yoffset)
 {
-    Position += Front * yoffset * 0.1f;
+    Position += Front * yoffset * 0.6f;
 }
 
 void Camera::updateCameraVectors()

@@ -12,6 +12,8 @@
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
 #include "FrameBuffer/FrameBuffer.hpp"
+#include "Buildplate/Buildplate.hpp"
+#include <clipper2/clipper.h>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
@@ -23,7 +25,7 @@ unsigned int SCR_WIDTH = 1280;
 unsigned int SCR_HEIGHT = 720;
 
 // camera
-Camera camera(glm::vec3(0.0f, 0.0f, 1.5f));
+Camera camera(glm::vec3(18.0f, 15.0f, 18.0));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -81,7 +83,13 @@ int main()
 
     // build and compile our shader program
     // ------------------------------------
+    Shader BuildplateShader("/home/xandervaes/Code/ZupaSlica/src/ShaderFiles/BuildplateShader.vs", "/home/xandervaes/Code/ZupaSlica/src/ShaderFiles/BuildplateShader.fs");
     Shader objectShader("/home/xandervaes/Code/ZupaSlica/src/ShaderFiles/ObjectShader.vs", "/home/xandervaes/Code/ZupaSlica/src/ShaderFiles/ObjectShader.fs");
+
+
+    //Setup environment
+    glm::mat4 model = glm::mat4(1.0f);
+    Mesh buildPlate = Mesh(Buildplate::GetVertices(), Buildplate::GetIndices(), std::vector<Texture>());
 
     // load models
     // -----------
@@ -110,8 +118,8 @@ int main()
     {
         // render
         // ------
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // also clear the depth buffer now!glClear(GL_COLOR_BUFFER_BIT);
+        glClearColor(0.9f, 0.9f, 0.9f, 1.0f);
 
         sceneBuffer.Bind();
 
@@ -128,8 +136,33 @@ int main()
 
         // render
         // ------
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClearColor(0.80f, 1.0f, 0.80f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // also clear the depth buffer now!glClear(GL_COLOR_BUFFER_BIT);
+
+        //projection and view matrix
+        glm::mat4 view = camera.GetViewMatrix();
+        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+        
+
+        //buildplate
+        BuildplateShader.use();
+        //light properties
+        BuildplateShader.setVec3("objectColor", 0.8f, 0.8f, 0.7f);
+        BuildplateShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
+        BuildplateShader.setVec3("lightPos", camera.Position);
+        BuildplateShader.setVec3("viewPos", camera.Position);
+
+        BuildplateShader.setMat4("view", view);
+        BuildplateShader.setMat4("projection", projection);
+
+        model = glm::mat4(1.0f);
+        //scale to buildplate dimensions
+        //dimension for ender3 buildplate: 22x22
+        model = glm::scale(model, glm::vec3(22.0f, 1.0f, 22.0f));
+        BuildplateShader.setMat4("model", model);
+
+        buildPlate.Draw(BuildplateShader);
+
 
 
         // be sure to activate shader when setting uniforms/drawing objects
@@ -142,15 +175,14 @@ int main()
         objectShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
 
         // view/projection transformations
-        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-        glm::mat4 view = camera.GetViewMatrix();
         objectShader.setMat4("projection", projection);
         objectShader.setMat4("view", view);
 
         // render the loaded model
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
-        model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));	// it's a bit too big for our scene, so scale it down
+        model = glm::mat4(1.0f);
+        //model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
+        model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));	// it's a bit too big for our scene, so scale it down
         objectShader.setMat4("model", model);
 
         ourModel.Draw(objectShader);
@@ -196,7 +228,7 @@ int main()
         
 
         // render your GUI
-        ImGui::Begin("Hello, world!");
+        ImGui::Begin("Inputs");
         //get aspect ratio
         float aspect = (float)SCR_WIDTH / (float)SCR_HEIGHT;
         ImGui::Text("Aspect ratio: %f", aspect);
