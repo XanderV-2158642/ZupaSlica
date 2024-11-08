@@ -162,6 +162,37 @@ int main()
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
+        // Set the window to fill the viewport
+        ImGui::SetNextWindowPos(ImVec2(0, 0));
+        ImGui::SetNextWindowSize(io.DisplaySize);
+
+        // Set up the main ImGui window (often covers the full application window)
+        ImGui::Begin("ZupaSlica", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
+                                             ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+                                             ImGuiWindowFlags_NoBringToFrontOnFocus |
+                                             ImGuiWindowFlags_NoNavFocus);
+        
+        //add menu to docking window to disable the docking
+        if (ImGui::BeginMenuBar())
+        {
+            if (ImGui::BeginMenu("Docking"))
+            {
+                if (ImGui::MenuItem("Disable Docking"))
+                {
+                    io.ConfigFlags &= ~ImGuiConfigFlags_DockingEnable;
+                }
+                ImGui::EndMenu();
+            }
+            ImGui::EndMenuBar();
+        }
+        
+
+        // Dockspace ID - unique identifier for the dockspace
+        ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+
+        // Set up the dockspace within this main ImGui window
+        ImGui::DockSpace(dockspace_id, ImVec2(0, 0), 0);
+
         
 
         // render your GUI
@@ -193,6 +224,8 @@ int main()
             );
         }
         ImGui::EndChild();
+        ImGui::End();
+
         ImGui::End();
 
         ImGui::Render();
