@@ -4,7 +4,7 @@
 class SlicerSettings
 {
 private:
-    float slicingPlaneHeight;
+    float slicingPlaneHeight; //mm
 public:
     float GetSlicingPlaneHeight() { return slicingPlaneHeight; }
     void SetSlicingPlaneHeight(float height) { slicingPlaneHeight = height; }

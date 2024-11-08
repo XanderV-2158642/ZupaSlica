@@ -17,6 +17,7 @@
 #include "SlicingPlane/SlicingPlane.hpp"
 #include <clipper2/clipper.h>
 #include "SlicerSettings/SlicerSettings.hpp"
+#include "Slicing/TriangleIntersections/CalculateIntersections.hpp"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
@@ -103,13 +104,38 @@ int main()
 
     // load models
     // -----------
-    Model ourModel("/home/xandervaes/Code/ZupaSlica/school_stuff/COFAB-models-set1/COFAB-models-set1/support-test.stl");
+    Model ourModel("/home/xandervaes/Code/ZupaSlica/school_stuff/COFAB-models-set1/COFAB-models-set1/cube.stl");
 
     // uncomment this call to draw in wireframe polygons.
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     printf("Amount of meshes: %d\n", ourModel.meshes.size());
-    
+
+    //write the vertices and indices to 1 file
+    std::ofstream verticesFile;
+    verticesFile.open("/home/xandervaes/Code/ZupaSlica/OutSTL/vertices.txt");
+    for (int i = 0; i < ourModel.meshes[0].vertices.size(); i++) {
+        verticesFile << ourModel.meshes[0].vertices[i].Position.x << " " << ourModel.meshes[0].vertices[i].Position.y << " " << ourModel.meshes[0].vertices[i].Position.z << "\n";
+    }
+    verticesFile.close();
+
+    std::ofstream indicesFile;
+    indicesFile.open("/home/xandervaes/Code/ZupaSlica/OutSTL/indices.txt");
+    for (int i = 0; i < ourModel.meshes[0].indices.size(); i++) {
+        indicesFile << ourModel.meshes[0].indices[i] << "\n";
+    }
+    indicesFile.close();
+
+    // print the vertices of the first mesh
+    for (int i = 0; i < ourModel.meshes[0].vertices.size(); i++) {
+        //printf("Vertex %d: %f, %f, %f\n", i, ourModel.meshes[0].vertices[i].Position.x, ourModel.meshes[0].vertices[i].Position.y, ourModel.meshes[0].vertices[i].Position.z);
+    }
+
+    // print the indices of the first mesh
+    for (int i = 0; i < ourModel.meshes[0].indices.size(); i++) {
+        //printf("Index %d: %d\n", i, ourModel.meshes[0].indices[i]);
+    }
+
 
 
     //imgui
@@ -165,7 +191,7 @@ int main()
         DrawSTL::Draw(objectShader, ourModel, view, projection, camera);
 
         //slice plane (draw last because it is transparent)
-        slicingPlane.SetPosition(glm::vec3(0.0f, slicerSettings.GetSlicingPlaneHeight(), 0.0f));
+        slicingPlane.SetPosition(glm::vec3(0.0f, slicerSettings.GetSlicingPlaneHeight()/10, 0.0f));
         slicingPlane.Draw(view, projection, camera);
 
         sceneBuffer.Unbind();
@@ -199,8 +225,18 @@ int main()
         {
             //slicing plane height
             float slicingPlaneHeight = slicerSettings.GetSlicingPlaneHeight();
-            ImGui::SliderFloat("Slicing plane height", &slicingPlaneHeight, 0.0f, 25.0f);
+            ImGui::SliderFloat("Slicing plane height", &slicingPlaneHeight, 0.0f, 250.0f);
             slicerSettings.SetSlicingPlaneHeight(slicingPlaneHeight);
+
+            // button to calculate intersection
+            if (ImGui::Button("Calculate intersection")) {
+                printf("Calculate intersection\n");
+                vector<VertexLine> vlOut = CalculateIntersections::CalculateLines(ourModel.meshes[0].vertices, slicerSettings.GetSlicingPlaneHeight());
+                printf("Amount of lines: %d\n", vlOut[0].lineSegments.size());
+                for (int i = 0; i < vlOut[0].lineSegments.size(); i++) {
+                    printf("Line %d: %f, %f, %f - %f, %f, %f\n", i, vlOut[0].lineSegments[i].v1.Position.x, vlOut[0].lineSegments[i].v1.Position.y, vlOut[0].lineSegments[i].v1.Position.z, vlOut[0].lineSegments[i].v2.Position.x, vlOut[0].lineSegments[i].v2.Position.y, vlOut[0].lineSegments[i].v2.Position.z);
+                }
+            }
         } 
         ImGui::End();
 
@@ -219,6 +255,13 @@ int main()
                 ImVec2(1, 0)
             );
             ImGui::EndChild();
+        }
+        ImGui::End();
+
+        
+        ImGui::Begin("Intersection");
+        {
+            ImGui::Text("test input");
         }
         ImGui::End();
 
