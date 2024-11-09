@@ -20,19 +20,54 @@ class CalculateIntersections
 {
 
 private:
-    static bool IsIntersecting(vector<Vertex> triangleVertices, float intersectionHeight);
+    static bool IsIntersecting(vector<Vertex> &triangleVertices, float intersectionHeight);
     static void SortByHeight(vector<Vertex> &triangleVertices);
+
+    static vector<VertexPair> CalculatePairs(vector<Vertex> &vertices, float intersectionHeight);
+    static vector<VertexLine> CalculateLines(vector<VertexPair> &vertexPairs, float intersectionHeight);
+    static void GroupLine(vector<VertexPair> &vertexPairs, VertexLine &line);
 public:
-    static vector<VertexLine> CalculateLines(vector<Vertex> vertices, float intersectionHeight);
+    static vector<VertexLine> CalculateLines(vector<Vertex> &vertices, float intersectionHeight);
 };
 
-vector<VertexLine> CalculateIntersections::CalculateLines(vector<Vertex> vertices, float intersectionHeight)
+vector<VertexLine> CalculateIntersections::CalculateLines(vector<Vertex> &vertices, float intersectionHeight)
 {
     if (vertices.size() % 3 != 0)
     {
+        printf("Amount of vertices: %d\n", vertices.size());
         throw "Amount of vertices is not a multiple of 3";
     }
 
+    vector<VertexPair> vertexPairs = CalculatePairs(vertices, intersectionHeight);
+
+    for (int i = 0; i < vertexPairs.size(); i++)
+    {
+        //printf("Pair %d: (%f, %f) - (%f, %f)\n", i, vertexPairs[i].v1.Position.x, vertexPairs[i].v1.Position.y, vertexPairs[i].v2.Position.x, vertexPairs[i].v2.Position.y);
+    }
+
+    vector<VertexLine> lines = CalculateLines(vertexPairs, intersectionHeight);   
+
+    return lines;
+}
+
+bool CalculateIntersections::IsIntersecting(vector<Vertex> &triangleVertices, float intersectionHeight)
+{
+    // check if the intersectionHeight is between the y values of the triangle
+    float minY = min(triangleVertices[0].Position.y, min(triangleVertices[1].Position.y, triangleVertices[2].Position.y));
+    float maxY = max(triangleVertices[0].Position.y, max(triangleVertices[1].Position.y, triangleVertices[2].Position.y));
+
+    return intersectionHeight >= minY && intersectionHeight <= maxY;
+}
+
+void CalculateIntersections::SortByHeight(vector<Vertex> &triangleVertices)
+{
+    // sort the vertices by height
+    sort(triangleVertices.begin(), triangleVertices.end(), [](Vertex v1, Vertex v2) {
+        return v1.Position.z < v2.Position.z;
+    });
+}
+
+vector<VertexPair> CalculateIntersections::CalculatePairs(vector<Vertex> &vertices, float intersectionHeight){
     vector<VertexPair> vertexPairs;
     // vertices are grouped by 3 creating a triangle
     for (int i = 0; i < vertices.size(); i += 3)
@@ -74,29 +109,80 @@ vector<VertexLine> CalculateIntersections::CalculateLines(vector<Vertex> vertice
                 vertexPairs.push_back(pair);
             }
         }
-
     }
-    VertexLine line;
-    line.lineSegments = vertexPairs;
-
-    return {line};
+    return vertexPairs;
 }
 
-bool CalculateIntersections::IsIntersecting(vector<Vertex> triangleVertices, float intersectionHeight)
+vector<VertexLine> CalculateIntersections::CalculateLines(vector<VertexPair> &vertexPairs, float intersectionHeight)
 {
-    // check if the intersectionHeight is between the y values of the triangle
-    float minY = min(triangleVertices[0].Position.y, min(triangleVertices[1].Position.y, triangleVertices[2].Position.y));
-    float maxY = max(triangleVertices[0].Position.y, max(triangleVertices[1].Position.y, triangleVertices[2].Position.y));
+    // create a line for all connecting pairs
+    vector<VertexLine> lines;
 
-    return intersectionHeight >= minY && intersectionHeight <= maxY;
+    double epsilon = 0.05;
+    
+    while (vertexPairs.size() > 0)
+    {
+        // take the first element out of the vector, remove it from the pairs so it can not pick itself and start a line with it
+        VertexPair curPair = vertexPairs[0];
+        vertexPairs.erase(vertexPairs.begin());
+
+        VertexLine line;
+        line.lineSegments.push_back(curPair);
+
+        glm::vec3 linepos = curPair.v2.Position;
+
+        // find the next pair that connects to the last pair
+        while (true)
+        {
+            bool found = false;
+            for (int i = 0; i < vertexPairs.size(); i++)
+            {
+                if (glm::distance(linepos, vertexPairs[i].v1.Position) < epsilon)
+                {
+                    curPair = vertexPairs[i];
+                    vertexPairs.erase(vertexPairs.begin() + i);
+                    line.lineSegments.push_back(curPair);
+                    linepos = curPair.v2.Position;
+                    found = true;
+                    break;
+                }
+                else if (glm::distance(linepos, vertexPairs[i].v2.Position) < epsilon)
+                {
+                    curPair = vertexPairs[i];
+                    vertexPairs.erase(vertexPairs.begin() + i);
+                    line.lineSegments.push_back(curPair);
+                    linepos = curPair.v1.Position;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+            {
+                break;
+            }
+        }
+
+        //check if the line is closed
+        if (glm::distance(line.lineSegments[0].v1.Position, line.lineSegments[line.lineSegments.size() - 1].v2.Position) < epsilon)
+        {
+            lines.push_back(line);
+        } else if (glm::distance(line.lineSegments[0].v1.Position, line.lineSegments[line.lineSegments.size() - 1].v1.Position) < epsilon)
+        {
+            lines.push_back(line);
+        }
+        else {
+            // throw error line is not closed
+            printf("Line is not closed\n");
+            //throw "Line is not closed";
+        }
+    }
+
+    return lines;
 }
 
-void CalculateIntersections::SortByHeight(vector<Vertex> &triangleVertices)
+void CalculateIntersections::GroupLine(vector<VertexPair> &vertexPairs, VertexLine &line)
 {
-    // sort the vertices by height
-    sort(triangleVertices.begin(), triangleVertices.end(), [](Vertex v1, Vertex v2) {
-        return v1.Position.z < v2.Position.z;
-    });
+    
 }
 
 #endif

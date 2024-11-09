@@ -18,6 +18,7 @@
 #include <clipper2/clipper.h>
 #include "SlicerSettings/SlicerSettings.hpp"
 #include "Slicing/TriangleIntersections/CalculateIntersections.hpp"
+#include "Intersection/Intersection.hpp"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
@@ -25,8 +26,8 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
 // initial window dimensions
-unsigned int SCR_WIDTH = 1280;
-unsigned int SCR_HEIGHT = 720;
+unsigned int SCR_WIDTH = 1980;
+unsigned int SCR_HEIGHT = 1080;
 
 // camera
 Camera camera(glm::vec3(18.0f, 15.0f, 18.0));
@@ -104,39 +105,14 @@ int main()
 
     // load models
     // -----------
-    Model ourModel("/home/xandervaes/Code/ZupaSlica/school_stuff/COFAB-models-set1/COFAB-models-set1/cube.stl");
+    Model ourModel("/home/xandervaes/Code/ZupaSlica/school_stuff/COFAB-models-set1/COFAB-models-set1/support-test.stl");
+
+    Intersection intersection = Intersection();
 
     // uncomment this call to draw in wireframe polygons.
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     printf("Amount of meshes: %d\n", ourModel.meshes.size());
-
-    //write the vertices and indices to 1 file
-    std::ofstream verticesFile;
-    verticesFile.open("/home/xandervaes/Code/ZupaSlica/OutSTL/vertices.txt");
-    for (int i = 0; i < ourModel.meshes[0].vertices.size(); i++) {
-        verticesFile << ourModel.meshes[0].vertices[i].Position.x << " " << ourModel.meshes[0].vertices[i].Position.y << " " << ourModel.meshes[0].vertices[i].Position.z << "\n";
-    }
-    verticesFile.close();
-
-    std::ofstream indicesFile;
-    indicesFile.open("/home/xandervaes/Code/ZupaSlica/OutSTL/indices.txt");
-    for (int i = 0; i < ourModel.meshes[0].indices.size(); i++) {
-        indicesFile << ourModel.meshes[0].indices[i] << "\n";
-    }
-    indicesFile.close();
-
-    // print the vertices of the first mesh
-    for (int i = 0; i < ourModel.meshes[0].vertices.size(); i++) {
-        //printf("Vertex %d: %f, %f, %f\n", i, ourModel.meshes[0].vertices[i].Position.x, ourModel.meshes[0].vertices[i].Position.y, ourModel.meshes[0].vertices[i].Position.z);
-    }
-
-    // print the indices of the first mesh
-    for (int i = 0; i < ourModel.meshes[0].indices.size(); i++) {
-        //printf("Index %d: %d\n", i, ourModel.meshes[0].indices[i]);
-    }
-
-
 
     //imgui
     IMGUI_CHECKVERSION();
@@ -149,6 +125,7 @@ int main()
     ImGui_ImplOpenGL3_Init("#version 460");
 
     FrameBuffer sceneBuffer(SCR_WIDTH, SCR_HEIGHT);
+    FrameBuffer intersectionBuffer(SCR_WIDTH, SCR_HEIGHT);
 
     SlicerSettings slicerSettings = SlicerSettings();
 
@@ -195,6 +172,20 @@ int main()
         slicingPlane.Draw(view, projection, camera);
 
         sceneBuffer.Unbind();
+
+        // draw 2d intersection
+        intersectionBuffer.Bind();
+        glDisable(GL_DEPTH_TEST);
+
+
+        glClear(GL_COLOR_BUFFER_BIT); // also clear the depth buffer now!glClear(GL_COLOR_BUFFER_BIT);
+        glClearColor(0.0, 0.05f, 0.0f, 1.0f);
+
+        // draw the intersection
+        intersection.DrawIntersection();
+
+        glEnable(GL_DEPTH_TEST);
+        intersectionBuffer.Unbind();
         
 
         // start the ImGui frame
@@ -231,11 +222,9 @@ int main()
             // button to calculate intersection
             if (ImGui::Button("Calculate intersection")) {
                 printf("Calculate intersection\n");
-                vector<VertexLine> vlOut = CalculateIntersections::CalculateLines(ourModel.meshes[0].vertices, slicerSettings.GetSlicingPlaneHeight());
-                printf("Amount of lines: %d\n", vlOut[0].lineSegments.size());
-                for (int i = 0; i < vlOut[0].lineSegments.size(); i++) {
-                    printf("Line %d: %f, %f, %f - %f, %f, %f\n", i, vlOut[0].lineSegments[i].v1.Position.x, vlOut[0].lineSegments[i].v1.Position.y, vlOut[0].lineSegments[i].v1.Position.z, vlOut[0].lineSegments[i].v2.Position.x, vlOut[0].lineSegments[i].v2.Position.y, vlOut[0].lineSegments[i].v2.Position.z);
-                }
+                vector<VertexLine> vlOut= vector<VertexLine>();
+                vlOut = CalculateIntersections::CalculateLines(ourModel.meshes[0].vertices, slicerSettings.GetSlicingPlaneHeight());
+                intersection.SetLines(vlOut);   
             }
         } 
         ImGui::End();
@@ -261,7 +250,15 @@ int main()
         
         ImGui::Begin("Intersection");
         {
-            ImGui::Text("test input");
+            ImGui::BeginChild("IntersectionRender");
+
+            ImGui::Image(
+                (ImTextureID)intersectionBuffer.getFrameTexture(), 
+                ImGui::GetContentRegionAvail(), 
+                ImVec2(0, 1), 
+                ImVec2(1, 0)
+            );
+            ImGui::EndChild();
         }
         ImGui::End();
 
