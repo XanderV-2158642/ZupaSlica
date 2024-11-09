@@ -26,11 +26,14 @@ private:
 
     unsigned int shaderProgram;
 
+    float epsilon = 0.05f;
+
 public:
     Intersection();
     void DrawIntersection();
     void SetLines(vector<VertexLine> &lines) { this->lines = lines; }
     void PrintLines() { for (int i = 0; i < lines.size(); i++) { printf("Line %d\n", i); } }
+    vector<VertexLine> GetLines();
 
 };
 
@@ -146,6 +149,30 @@ void Intersection::Draw(Shader &shader, int amountOfLines)
     glBindVertexArray(VAO);
     glDrawArrays(GL_LINES, 0, amountOfLines*2);
     glBindVertexArray(0);
+}
+
+vector<VertexLine> Intersection::GetLines()
+{
+    for (int i = 0; i < lines.size(); i++)
+    {
+        vector<VertexPair> lineSegs = lines[i].lineSegments;
+        for (int j = 0; j < lineSegs.size()-1; j++)
+        {
+            if (glm::distance(lineSegs[j].v2.Position, lineSegs[j+1].v2.Position) < epsilon)
+            {
+                printf("Reversed pair\n");
+                printf("Pair %d: (%f, %f) - (%f, %f)\n", j, lineSegs[j].v1.Position.x, lineSegs[j].v1.Position.y, lineSegs[j].v2.Position.x, lineSegs[j].v2.Position.y);
+                printf("Pair %d: (%f, %f) - (%f, %f)\n", j+1, lineSegs[j+1].v1.Position.x, lineSegs[j+1].v1.Position.y, lineSegs[j+1].v2.Position.x, lineSegs[j+1].v2.Position.y);
+                // swap the the second pair
+                Vertex temp = lineSegs[j+1].v2;
+                lineSegs[j+1].v2 = lineSegs[j+1].v1;
+                lineSegs[j+1].v1 = temp;
+
+                lines[i].lineSegments = lineSegs;
+            }
+        }
+    }
+    return lines;
 }
 
 

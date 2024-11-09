@@ -19,6 +19,7 @@
 #include "SlicerSettings/SlicerSettings.hpp"
 #include "Slicing/TriangleIntersections/CalculateIntersections.hpp"
 #include "Intersection/Intersection.hpp"
+#include "Slicing/Gcode/GcodeWriter.hpp"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
@@ -128,6 +129,7 @@ int main()
     FrameBuffer intersectionBuffer(SCR_WIDTH, SCR_HEIGHT);
 
     SlicerSettings slicerSettings = SlicerSettings();
+    GCodeWriter gcodeWriter = GCodeWriter();
 
     // render loop
     // -----------
@@ -153,7 +155,7 @@ int main()
 
         // render
         // ------
-        glClearColor(0.0, 0.10f, 0.0f, 1.0f);
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // also clear the depth buffer now!glClear(GL_COLOR_BUFFER_BIT);
 
         //projection and view matrix
@@ -178,8 +180,8 @@ int main()
         glDisable(GL_DEPTH_TEST);
 
 
-        glClear(GL_COLOR_BUFFER_BIT); // also clear the depth buffer now!glClear(GL_COLOR_BUFFER_BIT);
-        glClearColor(0.0, 0.05f, 0.0f, 1.0f);
+        glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // also clear the depth buffer now!glClear(GL_COLOR_BUFFER_BIT);
 
         // draw the intersection
         intersection.DrawIntersection();
@@ -225,6 +227,13 @@ int main()
                 vector<VertexLine> vlOut= vector<VertexLine>();
                 vlOut = CalculateIntersections::CalculateLines(ourModel.meshes[0].vertices, slicerSettings.GetSlicingPlaneHeight());
                 intersection.SetLines(vlOut);   
+            }
+
+            // button to export to gcode
+            if (ImGui::Button("Export to Gcode")) {
+                printf("Export to Gcode\n");
+                vector<VertexLine> lines = intersection.GetLines();
+                gcodeWriter.WriteGCode("/home/xandervaes/Code/ZupaSlica/GCodeOut", lines);
             }
         } 
         ImGui::End();
