@@ -5,6 +5,7 @@
 #include "../Slicing/TriangleIntersections/CalculateIntersections.hpp"
 #include "../Mesh/Mesh.hpp"
 #include "../Shader/Shader.hpp"
+#include <clipper2/clipper.h>
 
 // settings
 const unsigned int INTERSECTION_WIDTH = 1280;
@@ -20,7 +21,7 @@ private:
     void Draw(Shader &shader, int amountOfLines);
 
     unsigned int VBO, VAO;
-    vector<VertexLine> lines;
+    Clipper2Lib::PathsD lines;
     Shader intersectionShader;
 
 
@@ -31,9 +32,9 @@ private:
 public:
     Intersection();
     void DrawIntersection();
-    void SetLines(vector<VertexLine> &lines) { this->lines = lines; }
+    void SetLines(Clipper2Lib::PathsD &paths) { lines = paths; }
     void PrintLines() { for (int i = 0; i < lines.size(); i++) { printf("Line %d\n", i); } }
-    vector<VertexLine> GetLines();
+    Clipper2Lib::PathsD GetLines() {return lines;}
 
 };
 
@@ -53,31 +54,54 @@ void Intersection::DrawIntersection()
     vector<float> vertices;
     for (int i = 0; i < lines.size(); i++)
     {
-        for (int j = 0; j < lines[i].lineSegments.size(); j++)
+        //refactor to PathsD
+        for (int j = 0; j < lines[i].size()-1; j++)
         {
-            if (lines[i].lineSegments[j].v1.Position.x < xmin)
+            if (lines[i][j].x < xmin)
             {
-                xmin = lines[i].lineSegments[j].v1.Position.x;
+                xmin = lines[i][j].x;
             }
-            if (lines[i].lineSegments[j].v1.Position.x > xmax)
+            if (lines[i][j].x > xmax)
             {
-                xmax = lines[i].lineSegments[j].v1.Position.x;
+                xmax = lines[i][j].x;
             }
-            if (lines[i].lineSegments[j].v1.Position.y < ymin)
+            if (lines[i][j].y < ymin)
             {
-                ymin = lines[i].lineSegments[j].v1.Position.y;
+                ymin = lines[i][j].y;
             }
-            if (lines[i].lineSegments[j].v1.Position.y > ymax)
+            if (lines[i][j].y > ymax)
             {
-                ymax = lines[i].lineSegments[j].v1.Position.y;
+                ymax = lines[i][j].y;
             }
 
-            
-            vertices.push_back(lines[i].lineSegments[j].v1.Position.x);
-            vertices.push_back(lines[i].lineSegments[j].v1.Position.y);
-            vertices.push_back(lines[i].lineSegments[j].v2.Position.x);
-            vertices.push_back(lines[i].lineSegments[j].v2.Position.y);
+            vertices.push_back(lines[i][j].x);
+            vertices.push_back(lines[i][j].y);
+            vertices.push_back(lines[i][j+1].x);
+            vertices.push_back(lines[i][j+1].y);
         }
+
+        // close the line and check if the last point is min or max
+        if (lines[i][lines[i].size()-1].x < xmin)
+        {
+            xmin = lines[i][lines[i].size()-1].x;
+        }
+        if (lines[i][lines[i].size()-1].x > xmax)
+        {
+            xmax = lines[i][lines[i].size()-1].x;
+        }
+        if (lines[i][lines[i].size()-1].y < ymin)
+        {
+            ymin = lines[i][lines[i].size()-1].y;
+        }
+        if (lines[i][lines[i].size()-1].y > ymax)
+        {
+            ymax = lines[i][lines[i].size()-1].y;
+        }
+
+        vertices.push_back(lines[i][lines[i].size()-1].x);
+        vertices.push_back(lines[i][lines[i].size()-1].y);
+        vertices.push_back(lines[i][0].x);
+        vertices.push_back(lines[i][0].y);
     }
 
     //scale down to fit -0.8 to 0.8 and center
@@ -97,9 +121,6 @@ void Intersection::DrawIntersection()
             vertices[i] = (vertices[i] - ymin) / highestDiff * 1.6 - 0.8;
         }
     }
-
-
-
 
     UpdateBuffers(vertices);
     Draw(intersectionShader, vertices.size()/2);
@@ -150,30 +171,5 @@ void Intersection::Draw(Shader &shader, int amountOfLines)
     glDrawArrays(GL_LINES, 0, amountOfLines*2);
     glBindVertexArray(0);
 }
-
-vector<VertexLine> Intersection::GetLines()
-{
-    for (int i = 0; i < lines.size(); i++)
-    {
-        vector<VertexPair> lineSegs = lines[i].lineSegments;
-        for (int j = 0; j < lineSegs.size()-1; j++)
-        {
-            if (glm::distance(lineSegs[j].v2.Position, lineSegs[j+1].v2.Position) < epsilon)
-            {
-                printf("Reversed pair\n");
-                printf("Pair %d: (%f, %f) - (%f, %f)\n", j, lineSegs[j].v1.Position.x, lineSegs[j].v1.Position.y, lineSegs[j].v2.Position.x, lineSegs[j].v2.Position.y);
-                printf("Pair %d: (%f, %f) - (%f, %f)\n", j+1, lineSegs[j+1].v1.Position.x, lineSegs[j+1].v1.Position.y, lineSegs[j+1].v2.Position.x, lineSegs[j+1].v2.Position.y);
-                // swap the the second pair
-                Vertex temp = lineSegs[j+1].v2;
-                lineSegs[j+1].v2 = lineSegs[j+1].v1;
-                lineSegs[j+1].v1 = temp;
-
-                lines[i].lineSegments = lineSegs;
-            }
-        }
-    }
-    return lines;
-}
-
 
 #endif

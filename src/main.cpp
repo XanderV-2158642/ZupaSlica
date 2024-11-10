@@ -224,16 +224,16 @@ int main()
             // button to calculate intersection
             if (ImGui::Button("Calculate intersection")) {
                 printf("Calculate intersection\n");
-                vector<VertexLine> vlOut= vector<VertexLine>();
-                vlOut = CalculateIntersections::CalculateLines(ourModel.meshes[0].vertices, slicerSettings.GetSlicingPlaneHeight());
-                intersection.SetLines(vlOut);   
+                Clipper2Lib::PathsD paths = CalculateIntersections::CalculateClipperPaths(ourModel.meshes[0].vertices, slicerSettings.GetSlicingPlaneHeight());
+                intersection.SetLines(paths);   
             }
 
             // button to export to gcode
             if (ImGui::Button("Export to Gcode")) {
                 printf("Export to Gcode\n");
-                vector<VertexLine> lines = intersection.GetLines();
-                gcodeWriter.WriteGCode("/home/xandervaes/Code/ZupaSlica/GCodeOut", lines);
+                Clipper2Lib::PathsD paths = intersection.GetLines();
+                
+                gcodeWriter.WriteGCode("/home/xandervaes/Code/ZupaSlica/GCodeOut", paths);
             }
         } 
         ImGui::End();

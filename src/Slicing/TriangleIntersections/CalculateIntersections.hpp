@@ -4,6 +4,7 @@
 #include <vector>
 #include "../../Mesh/Mesh.hpp"
 #include <algorithm>
+#include <clipper2/clipper.h>
 
 struct VertexPair
 {
@@ -26,8 +27,14 @@ private:
     static vector<VertexPair> CalculatePairs(vector<Vertex> &vertices, float intersectionHeight);
     static vector<VertexLine> CalculateLines(vector<VertexPair> &vertexPairs, float intersectionHeight);
     static void GroupLine(vector<VertexPair> &vertexPairs, VertexLine &line);
+
+
+    
+
 public:
     static vector<VertexLine> CalculateLines(vector<Vertex> &vertices, float intersectionHeight);
+
+    static Clipper2Lib::PathsD CalculateClipperPaths(vector<Vertex> &lines, double intersectionHeight);
 };
 
 vector<VertexLine> CalculateIntersections::CalculateLines(vector<Vertex> &vertices, float intersectionHeight)
@@ -180,9 +187,45 @@ vector<VertexLine> CalculateIntersections::CalculateLines(vector<VertexPair> &ve
     return lines;
 }
 
+Clipper2Lib::PathsD CalculateIntersections::CalculateClipperPaths(vector<Vertex> &lines, double intersectionHeight)
+{
+    // first find all triangle intersecting lines using the calculatePairs function
+    vector<VertexPair> vertexPairs = CalculatePairs(lines, intersectionHeight);
+
+    // then group the pairs into lines
+    vector<VertexLine> vertexLines = CalculateLines(vertexPairs, intersectionHeight);
+
+
+    //then convert each of the lines into a PathD for the clipper library
+    Clipper2Lib::PathsD clipperPaths;
+    for (int i = 0; i < vertexLines.size(); i++)
+    {
+        Clipper2Lib::PathD clipperPath;
+        clipperPath.push_back(Clipper2Lib::PointD(vertexLines[i].lineSegments[0].v1.Position.x, vertexLines[i].lineSegments[0].v1.Position.y));
+        clipperPath.push_back(Clipper2Lib::PointD(vertexLines[i].lineSegments[0].v2.Position.x, vertexLines[i].lineSegments[0].v2.Position.y));
+        glm::vec3 lastPos = vertexLines[i].lineSegments[0].v2.Position;
+        for (int j = 1; j < vertexLines[i].lineSegments.size(); j++)
+        {
+            if (glm::distance(lastPos, vertexLines[i].lineSegments[j].v1.Position) < 0.05)
+            {
+                clipperPath.push_back(Clipper2Lib::PointD(vertexLines[i].lineSegments[j].v2.Position.x, vertexLines[i].lineSegments[j].v2.Position.y));
+                lastPos = vertexLines[i].lineSegments[j].v2.Position;
+            } else {
+                clipperPath.push_back(Clipper2Lib::PointD(vertexLines[i].lineSegments[j].v1.Position.x, vertexLines[i].lineSegments[j].v1.Position.y));
+                lastPos = vertexLines[i].lineSegments[j].v1.Position;
+            }
+        }
+        clipperPaths.push_back(clipperPath);
+    }
+
+    return clipperPaths;
+}
+
+
 void CalculateIntersections::GroupLine(vector<VertexPair> &vertexPairs, VertexLine &line)
 {
     
 }
+
 
 #endif

@@ -2,6 +2,7 @@
 #define GCODEWRITER_H
 #include <vector>
 #include "../TriangleIntersections/CalculateIntersections.hpp"
+#include <clipper2/clipper.h>
 
 
 const float DEFAULT_LAYER_HEIGHT = 0.2f;
@@ -75,50 +76,81 @@ public:
         this->extrusionVal = 2.40528f;
         this->layerHeight = layerHeight;
         this->width = width;
-
-
     }
 
-    void WriteGCode(const char* dirname, vector<VertexLine> &lines)
-    {
+    void WriteGCode(const char* dirname, vector<VertexLine> &lines);
+    void WriteGCode(const char* dirname, Clipper2Lib::PathsD &paths);
 
-        // create file inside directory
-        string filename = string(dirname) + "/output.gcode";
-        
-        // filename 
-        ofstream file;
-        file.open(filename);
-
-        file << GCODE_HEADER;
-
-        for (int i = 0; i < lines.size(); i++)
-        {
-
-            for (int j = 0; j < lines[i].lineSegments.size(); j++)
-            {
-                if (j == 0)
-                {
-                    file << "G0 F2400 X" << lines[i].lineSegments[j].v1.Position.x + bedCenterX << " Y" << lines[i].lineSegments[j].v1.Position.y + bedCenterY << " Z" << 0.2f << "\n";
-                    file << "G1 F1200" << " E" << extrudedLength << "\n";
-                }
-                
-                VertexPair pair = lines[i].lineSegments[j];
-                float dist = glm::distance(pair.v1.Position, pair.v2.Position);
-                float E = dist * width * layerHeight * extrusionVal;
-                extrudedLength += E;
-                //file << "G1 X" << pair.v1.Position.x + bedCenterX << " Y" << pair.v1.Position.y + bedCenterY <<  " E" << extrudedLength << "\n";
-                file << "G1 X" << pair.v2.Position.x + bedCenterX << " Y" << pair.v2.Position.y + bedCenterY<<  " E" << extrudedLength << "\n";
-
-                //printf("pair 1 - 2: %f %f - %f %f\n", pair.v1.Position.x, pair.v1.Position.y, pair.v2.Position.x, pair.v2.Position.y);
-            }
-        }
-
-        file << GCODE_FOOTER;
-        file.close();
-    }
+    
     
 };
 
+void GCodeWriter::WriteGCode(const char* dirname, vector<VertexLine> &lines)
+{
+
+    // create file inside directory
+    string filename = string(dirname) + "/output.gcode";
+    
+    // filename 
+    ofstream file;
+    file.open(filename);
+
+    file << GCODE_HEADER;
+
+    for (int i = 0; i < lines.size(); i++)
+    {
+
+        for (int j = 0; j < lines[i].lineSegments.size(); j++)
+        {
+            if (j == 0)
+            {
+                file << "G0 F2400 X" << lines[i].lineSegments[j].v1.Position.x + bedCenterX << " Y" << lines[i].lineSegments[j].v1.Position.y + bedCenterY << " Z" << 0.2f << "\n";
+                file << "G1 F1200" << " E" << extrudedLength << "\n";
+            }
+            
+            VertexPair pair = lines[i].lineSegments[j];
+            float dist = glm::distance(pair.v1.Position, pair.v2.Position);
+            float E = dist * width * layerHeight * extrusionVal;
+            extrudedLength += E;
+            //file << "G1 X" << pair.v1.Position.x + bedCenterX << " Y" << pair.v1.Position.y + bedCenterY <<  " E" << extrudedLength << "\n";
+            file << "G1 X" << pair.v2.Position.x + bedCenterX << " Y" << pair.v2.Position.y + bedCenterY<<  " E" << extrudedLength << "\n";
+
+            //printf("pair 1 - 2: %f %f - %f %f\n", pair.v1.Position.x, pair.v1.Position.y, pair.v2.Position.x, pair.v2.Position.y);
+        }
+    }
+
+    file << GCODE_FOOTER;
+    file.close();
+}
+
+void GCodeWriter::WriteGCode(const char* dirname, Clipper2Lib::PathsD &paths)
+{
+    string filename = string(dirname) + "/output.gcode";
+
+    ofstream file;
+    file.open(filename);
+
+    file << GCODE_HEADER;
+
+    for(int i = 0; i<paths.size(); i++){
+        file << "G0 F2400 X" << paths[i][0].x + bedCenterX << " Y" << paths[i][0].y + bedCenterY << " Z" << 0.2f << "\n";
+        file << "G1 F1200" << " E" << extrudedLength << "\n";
+        for (int j = 1; j < paths[i].size(); j++){
+            float distance = glm::distance(glm::vec2(paths[i][j].x, paths[i][j].y), glm::vec2(paths[i][j-1].x, paths[i][j-1].y));
+            float E = distance * width * layerHeight * extrusionVal;
+            extrudedLength += E;
+            file << "G1 X" << paths[i][j].x + bedCenterX << " Y" << paths[i][j].y + bedCenterY << " E" << extrudedLength << "\n";
+        }
+        //close the path
+        float distance = glm::distance(glm::vec2(paths[i][0].x, paths[i][0].y), glm::vec2(paths[i][paths[i].size()-1].x, paths[i][paths[i].size()-1].y));
+        float E = distance * width * layerHeight * extrusionVal;
+        extrudedLength += E;
+        file << "G1 X" << paths[i][0].x + bedCenterX << " Y" <<  paths[i][0].y << " E" << extrudedLength << "\n";
+    }
+
+
+    file << GCODE_FOOTER;
+}
 
 
 #endif
