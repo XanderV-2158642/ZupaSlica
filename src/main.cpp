@@ -20,6 +20,7 @@
 #include "Slicing/TriangleIntersections/CalculateIntersections.hpp"
 #include "Intersection/Intersection.hpp"
 #include "Slicing/Gcode/GcodeWriter.hpp"
+#include "Slicing/Slicing.hpp"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
@@ -170,7 +171,8 @@ int main()
         DrawSTL::Draw(objectShader, ourModel, view, projection, camera);
 
         //slice plane (draw last because it is transparent)
-        slicingPlane.SetPosition(glm::vec3(0.0f, slicerSettings.GetSlicingPlaneHeight()/10, 0.0f));
+        float height = intersection.GetSlicingPlaneHeight(slicerSettings.GetLayerHeight());
+        slicingPlane.SetPosition(glm::vec3(0.0f, height/10, 0.0f));
         slicingPlane.Draw(view, projection, camera);
 
         sceneBuffer.Unbind();
@@ -217,15 +219,16 @@ int main()
         ImGui::Begin("Inputs");
         {
             //slicing plane height
-            float slicingPlaneHeight = slicerSettings.GetSlicingPlaneHeight();
-            ImGui::SliderFloat("Slicing plane height", &slicingPlaneHeight, 0.0f, 250.0f);
-            slicerSettings.SetSlicingPlaneHeight(slicingPlaneHeight);
+            int shownPlane = intersection.GetHeight();
+            ImGui::SliderInt("Slicing plane height", &shownPlane, 0, intersection.GetMaxHeight()); 
+            intersection.SetHeight(shownPlane);
+            
 
             // button to calculate intersection
-            if (ImGui::Button("Calculate intersection")) {
-                printf("Calculate intersection\n");
-                Clipper2Lib::PathsD paths = CalculateIntersections::CalculateClipperPaths(ourModel.meshes[0].vertices, slicerSettings.GetSlicingPlaneHeight());
-                intersection.SetLines(paths);   
+            if (ImGui::Button("Slice")) {
+                printf("Slicing\n");
+                vector<Slice> sliceMap = Slicing::SliceModel(ourModel.meshes[0].vertices, slicerSettings);
+                intersection.SetSliceMap(sliceMap);
             }
 
             // button to export to gcode

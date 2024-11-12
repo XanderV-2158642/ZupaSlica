@@ -218,7 +218,23 @@ Clipper2Lib::PathsD CalculateIntersections::CalculateClipperPaths(vector<Vertex>
         clipperPaths.push_back(clipperPath);
     }
 
-    return clipperPaths;
+    Clipper2Lib::PathsD returnPaths;
+    returnPaths = Clipper2Lib::Union(clipperPaths, Clipper2Lib::FillRule::EvenOdd);
+
+    /*
+    printf("paths: \n");
+    for (int i = 0; i < clipperPaths.size(); i++)
+    {
+        printf("Path %d: %d \n", i, clipperPaths[i].size());
+    }
+
+    printf("UnionPaths: \n");
+    for (int i = 0; i < returnPaths.size(); i++)
+    {
+        printf("Path %d: %d \n", i, returnPaths[i].size());
+    }
+    */
+    return returnPaths;
 }
 
 

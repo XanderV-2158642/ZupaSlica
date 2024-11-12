@@ -5,6 +5,7 @@
 #include "../Slicing/TriangleIntersections/CalculateIntersections.hpp"
 #include "../Mesh/Mesh.hpp"
 #include "../Shader/Shader.hpp"
+#include "../Slicing/Slicing.hpp"
 #include <clipper2/clipper.h>
 
 // settings
@@ -28,6 +29,9 @@ private:
     unsigned int shaderProgram;
 
     float epsilon = 0.05f;
+    int plane = 0;
+
+    vector<Slice> sliceMap;
 
 public:
     Intersection();
@@ -35,11 +39,18 @@ public:
     void SetLines(Clipper2Lib::PathsD &paths) { lines = paths; }
     void PrintLines() { for (int i = 0; i < lines.size(); i++) { printf("Line %d\n", i); } }
     Clipper2Lib::PathsD GetLines() {return lines;}
+    void SetHeight(int index) {plane = index; if (index < sliceMap.size()) SetLines(sliceMap[index].paths);}
+    float GetHeight() {return plane;}
+    int GetMaxHeight() {return sliceMap.size();}
+    float GetSlicingPlaneHeight(float layerheight) {return (float) plane * layerheight;}
+
+    void SetSliceMap(vector<Slice> &slices) {sliceMap = slices;}
 
 };
 
 Intersection::Intersection() : intersectionShader("/home/xandervaes/Code/ZupaSlica/src/ShaderFiles/IntersectionShader.vs", "/home/xandervaes/Code/ZupaSlica/src/ShaderFiles/IntersectionShader.fs")
 {
+    sliceMap = vector<Slice>();
     SetupBuffers();
 }
 
