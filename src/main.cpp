@@ -31,6 +31,14 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 unsigned int SCR_WIDTH = 1980;
 unsigned int SCR_HEIGHT = 1080;
 
+unsigned int SCENE_WIDTH = 1280;
+unsigned int SCENE_HEIGHT = 720;
+
+unsigned int INTERSECTION_WIDTH = 1280;
+unsigned int INTERSECTION_HEIGHT = 720;
+
+bool resizeBuffer = false;
+
 // camera
 Camera camera(glm::vec3(18.0f, 15.0f, 18.0));
 float lastX = SCR_WIDTH / 2.0f;
@@ -136,6 +144,13 @@ int main()
     // -----------
     while (!glfwWindowShouldClose(window))
     {
+        if (resizeBuffer)
+        {
+            sceneBuffer.RescaleFrameBuffer(SCR_WIDTH, SCR_HEIGHT);
+            intersectionBuffer.RescaleFrameBuffer(SCR_WIDTH, SCR_HEIGHT);
+            resizeBuffer = false;
+        }
+
         // render
         // ------
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // also clear the depth buffer now!glClear(GL_COLOR_BUFFER_BIT);
@@ -161,7 +176,7 @@ int main()
 
         //projection and view matrix
         glm::mat4 view = camera.GetViewMatrix();
-        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCENE_WIDTH/ (float)SCENE_HEIGHT, 0.1f, 100.0f);
         
 
         //buildplate
@@ -186,7 +201,7 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // also clear the depth buffer now!glClear(GL_COLOR_BUFFER_BIT);
 
         // draw the intersection
-        intersection.DrawIntersection();
+        intersection.DrawIntersection((float) INTERSECTION_WIDTH / (float) INTERSECTION_HEIGHT);
 
         glEnable(GL_DEPTH_TEST);
         intersectionBuffer.Unbind();
@@ -218,10 +233,28 @@ int main()
         // render your GUI
         ImGui::Begin("Inputs");
         {
+            //layer height
+            float layerHeight = slicerSettings.GetLayerHeight();
+            ImGui::InputFloat("Layer height", &layerHeight, 0.02f, 0.1f, "%.2f mm");
+
+            //nozzle diameter
+            float nozzleDiameter = slicerSettings.GetNozzleDiameter();
+            ImGui::InputFloat("Nozzle diameter", &nozzleDiameter, 0.1f, 0.1f, "%.1f mm");
+
+            // number of shells 
+            int shells = slicerSettings.GetShells();
+            ImGui::InputInt("Shells", &shells, 1, 1);
+
+            // update settings
+            slicerSettings.SetLayerHeight(layerHeight);
+            slicerSettings.SetNozzleDiameter(nozzleDiameter);
+            slicerSettings.SetShells(shells);
+
             //slicing plane height
             int shownPlane = intersection.GetHeight();
-            ImGui::SliderInt("Slicing plane height", &shownPlane, 0, intersection.GetMaxHeight()); 
-            intersection.SetHeight(shownPlane);
+            if(ImGui::SliderInt("Slicing plane height", &shownPlane, 0, intersection.GetMaxHeight())){
+                intersection.SetHeight(shownPlane);
+            }
             
 
             // button to calculate intersection
@@ -229,6 +262,18 @@ int main()
                 printf("Slicing\n");
                 vector<Slice> sliceMap = Slicing::SliceModel(ourModel.meshes[0].vertices, slicerSettings);
                 intersection.SetSliceMap(sliceMap);
+            }
+
+            //button to erode layer
+            if (ImGui::Button("print dimensions")) {
+                Clipper2Lib::PathsD paths = intersection.GetLines();
+                for (int i = 0; i < paths.size(); i++)
+                {
+                    for (int j = 0; j < paths[i].size(); j++)
+                    {
+                        printf("Path %d: %f %f\n", i, paths[i][j].x, paths[i][j].y);
+                    }
+                }
             }
 
             // button to export to gcode
@@ -246,8 +291,8 @@ int main()
         {
             ImGui::BeginChild("GameRender");
 
-            SCR_WIDTH = ImGui::GetContentRegionAvail().x;
-            SCR_HEIGHT = ImGui::GetContentRegionAvail().y;
+            SCENE_WIDTH = ImGui::GetContentRegionAvail().x;
+            SCENE_HEIGHT = ImGui::GetContentRegionAvail().y;
 
             ImGui::Image(
                 (ImTextureID)sceneBuffer.getFrameTexture(), 
@@ -263,6 +308,9 @@ int main()
         ImGui::Begin("Intersection");
         {
             ImGui::BeginChild("IntersectionRender");
+            
+            INTERSECTION_WIDTH = ImGui::GetContentRegionAvail().x;
+            INTERSECTION_HEIGHT = ImGui::GetContentRegionAvail().y;
 
             ImGui::Image(
                 (ImTextureID)intersectionBuffer.getFrameTexture(), 
@@ -320,6 +368,12 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     // make sure the viewport matches the new window dimensions; note that width and 
     // height will be significantly larger than specified on retina displays.
+    glViewport(0, 0, width, height);
+    printf("Resizing\n");
+    printf ("Width: %d, Height: %d\n", width, height);
+    SCR_WIDTH = width;
+    SCR_HEIGHT = height;
+    resizeBuffer = true;
 }
 
 

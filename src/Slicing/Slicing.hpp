@@ -26,7 +26,7 @@ vector<Slice> Slicing::SliceModel(vector<Vertex> model, SlicerSettings settings)
     bool nonEmpty = true;
     while (nonEmpty)
     {
-        Clipper2Lib::PathsD paths = CalculateIntersections::CalculateClipperPaths(model, settings.GetSlicingPlaneHeight());
+        Clipper2Lib::PathsD paths = CalculateIntersections::CalculateClipperPaths(model, settings);
         //printf("Amount of paths: %d\n", paths.size());
         if (paths.size() == 0)
         {
@@ -36,6 +36,16 @@ vector<Slice> Slicing::SliceModel(vector<Vertex> model, SlicerSettings settings)
         {
             Slice slice;
             slice.height = settings.GetSlicingPlaneHeight();
+            //erode paths by half the nozzle diameter
+            paths = Clipper2Lib::InflatePaths(paths, -settings.GetNozzleDiameter() / 2, Clipper2Lib::JoinType::Miter, Clipper2Lib::EndType::Polygon);
+            //add inner shells
+            Clipper2Lib::PathsD lastPaths = paths;
+            for (int i = 0; i < settings.GetShells()-1; i++)
+            {
+                Clipper2Lib::PathsD shellPaths = Clipper2Lib::InflatePaths(lastPaths, -settings.GetNozzleDiameter(), Clipper2Lib::JoinType::Miter, Clipper2Lib::EndType::Polygon);
+                paths.insert(paths.end(), shellPaths.begin(), shellPaths.end());
+                lastPaths = shellPaths;
+            }
             slice.paths = paths;
             slices.push_back(slice);
             settings.SetSlicingPlaneHeight(settings.GetSlicingPlaneHeight() + layerHeight);

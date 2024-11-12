@@ -8,18 +8,13 @@
 #include "../Slicing/Slicing.hpp"
 #include <clipper2/clipper.h>
 
-// settings
-const unsigned int INTERSECTION_WIDTH = 1280;
-const unsigned int INTERSECTION_HEIGHT = 720;
-
-
 
 class Intersection
 {
 private:
     void SetupBuffers();
     void UpdateBuffers(vector<float> &vertices);
-    void Draw(Shader &shader, int amountOfLines);
+    void Draw(Shader &shader, int amountOfLines, float aspectRatio = 1.0f);
 
     unsigned int VBO, VAO;
     Clipper2Lib::PathsD lines;
@@ -35,7 +30,7 @@ private:
 
 public:
     Intersection();
-    void DrawIntersection();
+    void DrawIntersection(float aspectRatio);
     void SetLines(Clipper2Lib::PathsD &paths) { lines = paths; }
     void PrintLines() { for (int i = 0; i < lines.size(); i++) { printf("Line %d\n", i); } }
     Clipper2Lib::PathsD GetLines() {return lines;}
@@ -45,6 +40,9 @@ public:
     float GetSlicingPlaneHeight(float layerheight) {return (float) plane * layerheight;}
 
     void SetSliceMap(vector<Slice> &slices) {sliceMap = slices;}
+    vector<Slice> GetSliceMap() {return sliceMap;}
+
+    void Erode(float width);
 
 };
 
@@ -54,59 +52,19 @@ Intersection::Intersection() : intersectionShader("/home/xandervaes/Code/ZupaSli
     SetupBuffers();
 }
 
-void Intersection::DrawIntersection()
+void Intersection::DrawIntersection(float aspectRatio)
 {
     //draw lines
-    float xmin = 1000000;
-    float xmax = -1000000;
-    float ymin = 1000000;
-    float ymax = -1000000;
-
     vector<float> vertices;
     for (int i = 0; i < lines.size(); i++)
     {
         //refactor to PathsD
         for (int j = 0; j < lines[i].size()-1; j++)
         {
-            if (lines[i][j].x < xmin)
-            {
-                xmin = lines[i][j].x;
-            }
-            if (lines[i][j].x > xmax)
-            {
-                xmax = lines[i][j].x;
-            }
-            if (lines[i][j].y < ymin)
-            {
-                ymin = lines[i][j].y;
-            }
-            if (lines[i][j].y > ymax)
-            {
-                ymax = lines[i][j].y;
-            }
-
             vertices.push_back(lines[i][j].x);
             vertices.push_back(lines[i][j].y);
             vertices.push_back(lines[i][j+1].x);
             vertices.push_back(lines[i][j+1].y);
-        }
-
-        // close the line and check if the last point is min or max
-        if (lines[i][lines[i].size()-1].x < xmin)
-        {
-            xmin = lines[i][lines[i].size()-1].x;
-        }
-        if (lines[i][lines[i].size()-1].x > xmax)
-        {
-            xmax = lines[i][lines[i].size()-1].x;
-        }
-        if (lines[i][lines[i].size()-1].y < ymin)
-        {
-            ymin = lines[i][lines[i].size()-1].y;
-        }
-        if (lines[i][lines[i].size()-1].y > ymax)
-        {
-            ymax = lines[i][lines[i].size()-1].y;
         }
 
         vertices.push_back(lines[i][lines[i].size()-1].x);
@@ -115,26 +73,15 @@ void Intersection::DrawIntersection()
         vertices.push_back(lines[i][0].y);
     }
 
-    //scale down to fit -0.8 to 0.8 and center
-    float xdiff = xmax - xmin;
-    float ydiff = ymax - ymin;
-
-    float highestDiff = xdiff > ydiff ? xdiff : ydiff;
-
+    //scale to buildplate as -1 to 1
+    //buildplate is 220x220
     for (int i = 0; i < vertices.size(); i++)
     {
-        if (i % 2 == 0)
-        {
-            vertices[i] = (vertices[i] - xmin) / highestDiff * 1.6 - 0.8;
-        }
-        else
-        {
-            vertices[i] = (vertices[i] - ymin) / highestDiff * 1.6 - 0.8;
-        }
+        vertices[i] = vertices[i] / 110.0f;
     }
 
     UpdateBuffers(vertices);
-    Draw(intersectionShader, vertices.size()/2);
+    Draw(intersectionShader, vertices.size()/2, aspectRatio);
 }
 
 
@@ -174,13 +121,19 @@ void Intersection::UpdateBuffers(vector<float> &vertices){
 }
 
 
-void Intersection::Draw(Shader &shader, int amountOfLines)
+void Intersection::Draw(Shader &shader, int amountOfLines, float aspectRatio)
 {
     // draw the intersection
     shader.use();
+    shader.setFloat("aspectRatio", aspectRatio);
     glBindVertexArray(VAO);
     glDrawArrays(GL_LINES, 0, amountOfLines*2);
     glBindVertexArray(0);
+}
+
+void Intersection::Erode(float width)
+{
+    lines = Clipper2Lib::InflatePaths(lines, -width, Clipper2Lib::JoinType::Miter, Clipper2Lib::EndType::Polygon);
 }
 
 #endif

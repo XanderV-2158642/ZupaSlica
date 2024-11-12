@@ -34,7 +34,7 @@ private:
 public:
     static vector<VertexLine> CalculateLines(vector<Vertex> &vertices, float intersectionHeight);
 
-    static Clipper2Lib::PathsD CalculateClipperPaths(vector<Vertex> &lines, double intersectionHeight);
+    static Clipper2Lib::PathsD CalculateClipperPaths(vector<Vertex> &lines, SlicerSettings settings);
 };
 
 vector<VertexLine> CalculateIntersections::CalculateLines(vector<Vertex> &vertices, float intersectionHeight)
@@ -187,8 +187,9 @@ vector<VertexLine> CalculateIntersections::CalculateLines(vector<VertexPair> &ve
     return lines;
 }
 
-Clipper2Lib::PathsD CalculateIntersections::CalculateClipperPaths(vector<Vertex> &lines, double intersectionHeight)
+Clipper2Lib::PathsD CalculateIntersections::CalculateClipperPaths(vector<Vertex> &lines, SlicerSettings settings)
 {
+    double intersectionHeight = settings.GetSlicingPlaneHeight();
     // first find all triangle intersecting lines using the calculatePairs function
     vector<VertexPair> vertexPairs = CalculatePairs(lines, intersectionHeight);
 
@@ -221,19 +222,6 @@ Clipper2Lib::PathsD CalculateIntersections::CalculateClipperPaths(vector<Vertex>
     Clipper2Lib::PathsD returnPaths;
     returnPaths = Clipper2Lib::Union(clipperPaths, Clipper2Lib::FillRule::EvenOdd);
 
-    /*
-    printf("paths: \n");
-    for (int i = 0; i < clipperPaths.size(); i++)
-    {
-        printf("Path %d: %d \n", i, clipperPaths[i].size());
-    }
-
-    printf("UnionPaths: \n");
-    for (int i = 0; i < returnPaths.size(); i++)
-    {
-        printf("Path %d: %d \n", i, returnPaths[i].size());
-    }
-    */
     return returnPaths;
 }
 
