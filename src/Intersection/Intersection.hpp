@@ -7,6 +7,7 @@
 #include "../Shader/Shader.hpp"
 #include "../Slicing/Slicing.hpp"
 #include <clipper2/clipper.h>
+#include "../SlicerSettings/SlicerSettings.hpp"
 
 
 class Intersection
@@ -14,7 +15,8 @@ class Intersection
 private:
     void SetupBuffers();
     void UpdateBuffers(vector<float> &vertices);
-    void Draw(Shader &shader, int amountOfLines, float aspectRatio = 1.0f);
+    void Draw(Shader &shader, int amountOfLines, float aspectRatio = 1.0f, glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f));
+    vector<float> GetVertices(Clipper2Lib::PathsD &paths, float buildplateSize);
 
     unsigned int VBO, VAO;
     Clipper2Lib::PathsD lines;
@@ -30,11 +32,11 @@ private:
 
 public:
     Intersection();
-    void DrawIntersection(float aspectRatio);
+    void DrawIntersection(float aspectRatio, SlicerSettings settings);
     void SetLines(Clipper2Lib::PathsD &paths) { lines = paths; }
     void PrintLines() { for (int i = 0; i < lines.size(); i++) { printf("Line %d\n", i); } }
     Clipper2Lib::PathsD GetLines() {return lines;}
-    void SetHeight(int index) {plane = index; if (index < sliceMap.size()) SetLines(sliceMap[index].paths);}
+    void SetHeight(int index);
     float GetHeight() {return plane;}
     int GetMaxHeight() {return sliceMap.size();}
     float GetSlicingPlaneHeight(float layerheight) {return (float) plane * layerheight;}
@@ -52,36 +54,26 @@ Intersection::Intersection() : intersectionShader("/home/xandervaes/Code/ZupaSli
     SetupBuffers();
 }
 
-void Intersection::DrawIntersection(float aspectRatio)
+void Intersection::DrawIntersection(float aspectRatio, SlicerSettings settings)
 {
-    //draw lines
-    vector<float> vertices;
-    for (int i = 0; i < lines.size(); i++)
+    if (sliceMap.size() == 0)
     {
-        //refactor to PathsD
-        for (int j = 0; j < lines[i].size()-1; j++)
-        {
-            vertices.push_back(lines[i][j].x);
-            vertices.push_back(lines[i][j].y);
-            vertices.push_back(lines[i][j+1].x);
-            vertices.push_back(lines[i][j+1].y);
-        }
+        return;
+    }
+    vector<float> outerWall = GetVertices(sliceMap[plane].outerWall, settings.GetBuildVolume().x);
+    UpdateBuffers(outerWall);
+    Draw(intersectionShader, outerWall.size()/2, aspectRatio, glm::vec3(1.0f, 0.0f, 0.0f));
 
-        vertices.push_back(lines[i][lines[i].size()-1].x);
-        vertices.push_back(lines[i][lines[i].size()-1].y);
-        vertices.push_back(lines[i][0].x);
-        vertices.push_back(lines[i][0].y);
+    for (int i = 0; i < sliceMap[plane].shells.size(); i++)
+    {
+        vector<float> shell = GetVertices(sliceMap[plane].shells[i], settings.GetBuildVolume().x);
+        UpdateBuffers(shell);
+        Draw(intersectionShader, shell.size()/2, aspectRatio, glm::vec3(0.0f, 1.0f, 0.0f));
     }
 
-    //scale to buildplate as -1 to 1
-    //buildplate is 220x220
-    for (int i = 0; i < vertices.size(); i++)
-    {
-        vertices[i] = vertices[i] / 110.0f;
-    }
-
-    UpdateBuffers(vertices);
-    Draw(intersectionShader, vertices.size()/2, aspectRatio);
+    vector<float> infill = GetVertices(sliceMap[plane].infill, settings.GetBuildVolume().x);
+    UpdateBuffers(infill);
+    Draw(intersectionShader, infill.size()/2, aspectRatio, glm::vec3(1.0f, 1.0f, 0.0f));
 }
 
 
@@ -121,11 +113,12 @@ void Intersection::UpdateBuffers(vector<float> &vertices){
 }
 
 
-void Intersection::Draw(Shader &shader, int amountOfLines, float aspectRatio)
+void Intersection::Draw(Shader &shader, int amountOfLines, float aspectRatio, glm::vec3 color)
 {
     // draw the intersection
     shader.use();
     shader.setFloat("aspectRatio", aspectRatio);
+    shader.setVec3("color", color);
     glBindVertexArray(VAO);
     glDrawArrays(GL_LINES, 0, amountOfLines*2);
     glBindVertexArray(0);
@@ -135,5 +128,42 @@ void Intersection::Erode(float width)
 {
     lines = Clipper2Lib::InflatePaths(lines, -width, Clipper2Lib::JoinType::Miter, Clipper2Lib::EndType::Polygon);
 }
+
+
+void Intersection::SetHeight(int index)
+{
+    plane = index;
+}
+
+vector<float> Intersection::GetVertices(Clipper2Lib::PathsD &paths, float buildplateSize)
+{
+    vector<float> vertices;
+    for (int i = 0; i < paths.size(); i++)
+    {
+        //refactor to PathsD
+        for (int j = 0; j < paths[i].size()-1; j++)
+        {
+            vertices.push_back(paths[i][j].x);
+            vertices.push_back(paths[i][j].y);
+            vertices.push_back(paths[i][j+1].x);
+            vertices.push_back(paths[i][j+1].y);
+        }
+
+        vertices.push_back(paths[i][paths[i].size()-1].x);
+        vertices.push_back(paths[i][paths[i].size()-1].y);
+        vertices.push_back(paths[i][0].x);
+        vertices.push_back(paths[i][0].y);
+    }
+
+    //scale to buildplate as -1 to 1
+    //buildplate is 220x220
+    for (int i = 0; i < vertices.size(); i++)
+    {
+        vertices[i] = vertices[i] / (buildplateSize/2);
+    }
+
+    return vertices;
+}
+
 
 #endif

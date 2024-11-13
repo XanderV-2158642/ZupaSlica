@@ -21,6 +21,7 @@
 #include "Intersection/Intersection.hpp"
 #include "Slicing/Gcode/GcodeWriter.hpp"
 #include "Slicing/Slicing.hpp"
+#include "Slicing/Infill/CreateInfill.hpp"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
@@ -201,7 +202,7 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // also clear the depth buffer now!glClear(GL_COLOR_BUFFER_BIT);
 
         // draw the intersection
-        intersection.DrawIntersection((float) INTERSECTION_WIDTH / (float) INTERSECTION_HEIGHT);
+        intersection.DrawIntersection((float) INTERSECTION_WIDTH / (float) INTERSECTION_HEIGHT, slicerSettings);
 
         glEnable(GL_DEPTH_TEST);
         intersectionBuffer.Unbind();
@@ -245,14 +246,19 @@ int main()
             int shells = slicerSettings.GetShells();
             ImGui::InputInt("Shells", &shells, 1, 1);
 
+            float infillPercentage = slicerSettings.GetInfill();
+            if (ImGui::InputFloat("Infill percentage", &infillPercentage, 0.5f, 1.0f, "%.1f mm"))
+
             // update settings
             slicerSettings.SetLayerHeight(layerHeight);
             slicerSettings.SetNozzleDiameter(nozzleDiameter);
             slicerSettings.SetShells(shells);
+            slicerSettings.SetInfill(infillPercentage);
+            
 
             //slicing plane height
             int shownPlane = intersection.GetHeight();
-            if(ImGui::SliderInt("Slicing plane height", &shownPlane, 0, intersection.GetMaxHeight())){
+            if(ImGui::SliderInt("Slicing plane height", &shownPlane, 0, intersection.GetMaxHeight()-1)){
                 intersection.SetHeight(shownPlane);
             }
             
@@ -262,18 +268,6 @@ int main()
                 printf("Slicing\n");
                 vector<Slice> sliceMap = Slicing::SliceModel(ourModel.meshes[0].vertices, slicerSettings);
                 intersection.SetSliceMap(sliceMap);
-            }
-
-            //button to erode layer
-            if (ImGui::Button("print dimensions")) {
-                Clipper2Lib::PathsD paths = intersection.GetLines();
-                for (int i = 0; i < paths.size(); i++)
-                {
-                    for (int j = 0; j < paths[i].size(); j++)
-                    {
-                        printf("Path %d: %f %f\n", i, paths[i][j].x, paths[i][j].y);
-                    }
-                }
             }
 
             // button to export to gcode
