@@ -60,7 +60,7 @@ vector<Slice> Slicing::SliceModel(vector<Vertex> model, SlicerSettings settings)
             slice.innerWall = lastPaths;
 
             //add infill
-            Clipper2Lib::PathsD infill = CreateInfill::CreateRectInfill(settings.GetInfill(), settings);
+            Clipper2Lib::PathsD infill = CreateInfill::CreateDiagonalInfill(settings.GetInfill(), settings);
             infill = CreateInfill::ClipInfill(infill, slice.innerWall);
             slice.infill = infill;
 
