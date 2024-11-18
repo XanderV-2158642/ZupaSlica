@@ -139,7 +139,7 @@ int main()
     FrameBuffer intersectionBuffer(SCR_WIDTH, SCR_HEIGHT);
 
     SlicerSettings slicerSettings = SlicerSettings();
-    GCodeWriter gcodeWriter = GCodeWriter();
+    GCodeWriter gcodeWriter = GCodeWriter(slicerSettings);
 
     // render loop
     // -----------
@@ -273,9 +273,9 @@ int main()
             // button to export to gcode
             if (ImGui::Button("Export to Gcode")) {
                 printf("Export to Gcode\n");
-                Clipper2Lib::PathsD paths = intersection.GetLines();
-                
-                gcodeWriter.WriteGCode("/home/xandervaes/Code/ZupaSlica/GCodeOut", paths);
+                vector<Slice> slices = intersection.GetSliceMap();
+
+                gcodeWriter.WriteGCode("/home/xandervaes/Code/ZupaSlica/GCodeOut", slices);
             }
         } 
         ImGui::End();

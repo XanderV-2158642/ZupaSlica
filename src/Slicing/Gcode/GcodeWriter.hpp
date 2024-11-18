@@ -2,6 +2,9 @@
 #define GCODEWRITER_H
 #include <vector>
 #include "../TriangleIntersections/CalculateIntersections.hpp"
+#include "../../SlicerSettings/SlicerSettings.hpp"
+#include "../Slicing.hpp"
+
 #include <clipper2/clipper.h>
 
 
@@ -64,25 +67,38 @@ private:
     float extrusionVal = 0;
     float layerHeight = DEFAULT_LAYER_HEIGHT;
     float width = DEFAULT_WIDTH;
+    float speed = 50.0f;
 
     float bedCenterX = 110;
     float bedCenterY = 110;
 
-    float extrudedLength = 0;
+    double extrudedLength = 0;
+
+    SlicerSettings* settings;
+
+    void UpdateParams()
+    {
+        this->extrusionVal = 2.40528f;
+        this->layerHeight = settings->GetLayerHeight();
+        this->width = settings->GetNozzleDiameter();
+        bedCenterX = settings->GetBuildVolume().x / 2;
+        bedCenterY = settings->GetBuildVolume().y / 2;
+    }
+
+    void WriteShells(ofstream &file, vector<Clipper2Lib::PathsD> &shells, double height);
 
 public:
-    GCodeWriter(float layerHeight = DEFAULT_LAYER_HEIGHT, float width = DEFAULT_WIDTH)
+    GCodeWriter(SlicerSettings &settings, float layerHeight = DEFAULT_LAYER_HEIGHT, float width = DEFAULT_WIDTH)
     {
         this->extrusionVal = 2.40528f;
         this->layerHeight = layerHeight;
         this->width = width;
+        this->settings = &settings;
     }
 
     void WriteGCode(const char* dirname, vector<VertexLine> &lines);
     void WriteGCode(const char* dirname, Clipper2Lib::PathsD &paths);
-
-    
-    
+    void WriteGCode(const char* dirname, vector<Slice> &slices);
 };
 
 void GCodeWriter::WriteGCode(const char* dirname, vector<VertexLine> &lines)
@@ -152,5 +168,53 @@ void GCodeWriter::WriteGCode(const char* dirname, Clipper2Lib::PathsD &paths)
     file << GCODE_FOOTER;
 }
 
+void GCodeWriter::WriteGCode(const char *dirname, vector<Slice> &slices) {
+    string filename = string(dirname) + "/output.gcode";
+
+    ofstream file;
+    file.open(filename);
+
+    file << GCODE_HEADER;
+    for (int i = 0; i < slices.size(); i++){
+        Slice slice = slices[i];
+        // shells first
+        WriteShells(file, slice.shells, slice.height);
+        //then walls
+
+        //then infill
+
+    }
+    file << GCODE_FOOTER;
+
+    file.close();
+} 
+
+void GCodeWriter::WriteShells(ofstream &file, vector<Clipper2Lib::PathsD> &shells, double height){
+    string speedString = "F" + to_string(this->speed*60);
+    string printSpeed = "F" + to_string(this->speed*30);
+    for (int i = 0; i < shells.size(); i ++){
+        for (int j = 0; j < shells[i].size(); j++){
+            Clipper2Lib::PathD path = shells[i][j];
+            // go to start of path
+            file << "G0 " << speedString << " X" << path[0].x + bedCenterX << " Y" << path[0].y + bedCenterY << " Z" << height << "\n";
+            file << "G1 " << printSpeed << " E" << to_string(extrudedLength) << "\n";
+
+            //print the path
+            for (int k = 1; k < path.size(); k++){
+                double distance = glm::distance(glm::vec2(path[k].x, path[k].y), glm::vec2(path[k-1].x, path[k-1].y));
+                double E = distance * width * layerHeight * extrusionVal;
+                extrudedLength += E;
+                string extruded = " E" + to_string(extrudedLength);
+                file << "G1 " << printSpeed << " X" << path[k].x + bedCenterX << " Y" << path[k].y + bedCenterY << extruded << "\n";
+            }
+
+            //close the path
+            float distance = glm::distance(glm::vec2(path[0].x, path[0].y), glm::vec2(path[path.size()-1].x, path[path.size()-1].y));
+            float E = distance * width * layerHeight * extrusionVal;
+            extrudedLength += E;
+            file << "G1 " << printSpeed << " X" << path[0].x + bedCenterX << " Y" << path[0].y + bedCenterY << " E" << to_string(extrudedLength) << "\n";
+        }
+    }
+}
 
 #endif
