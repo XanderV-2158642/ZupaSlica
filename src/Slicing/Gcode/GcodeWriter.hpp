@@ -64,9 +64,9 @@ const char* GCODE_FOOTER = "M140 s0 ;set bed temperature \n"
 class GCodeWriter
 {
 private:
-    float extrusionVal = 0;
-    float layerHeight = DEFAULT_LAYER_HEIGHT;
-    float width = DEFAULT_WIDTH;
+    double extrusionVal = 0;
+    double layerHeight = DEFAULT_LAYER_HEIGHT;
+    double width = DEFAULT_WIDTH;
     float speed = 50.0f;
 
     float bedCenterX = 110;
@@ -86,13 +86,15 @@ private:
     }
 
     void WriteShells(ofstream &file, vector<Clipper2Lib::PathsD> &shells, double height);
+    void WriteWalls(ofstream &file, Clipper2Lib::PathsD &walls, double height);
+    void WriteInfill(ofstream &file, Clipper2Lib::PathsD &infill, double height);
 
 public:
-    GCodeWriter(SlicerSettings &settings, float layerHeight = DEFAULT_LAYER_HEIGHT, float width = DEFAULT_WIDTH)
+    GCodeWriter(SlicerSettings &settings)
     {
-        this->extrusionVal = 2.40528f;
-        this->layerHeight = layerHeight;
-        this->width = width;
+        this->extrusionVal = 2.40528;
+        this->layerHeight = DEFAULT_LAYER_HEIGHT;
+        this->width = DEFAULT_WIDTH;
         this->settings = &settings;
     }
 
@@ -112,6 +114,8 @@ void GCodeWriter::WriteGCode(const char* dirname, vector<VertexLine> &lines)
     file.open(filename);
 
     file << GCODE_HEADER;
+
+    extrudedLength = 0;
 
     for (int i = 0; i < lines.size(); i++)
     {
@@ -148,6 +152,8 @@ void GCodeWriter::WriteGCode(const char* dirname, Clipper2Lib::PathsD &paths)
 
     file << GCODE_HEADER;
 
+    extrudedLength = 0;
+
     for(int i = 0; i<paths.size(); i++){
         file << "G0 F2400 X" << paths[i][0].x + bedCenterX << " Y" << paths[i][0].y + bedCenterY << " Z" << 0.2f << "\n";
         file << "G1 F1200" << " E" << extrudedLength << "\n";
@@ -169,19 +175,24 @@ void GCodeWriter::WriteGCode(const char* dirname, Clipper2Lib::PathsD &paths)
 }
 
 void GCodeWriter::WriteGCode(const char *dirname, vector<Slice> &slices) {
+    UpdateParams();
     string filename = string(dirname) + "/output.gcode";
 
     ofstream file;
     file.open(filename);
 
     file << GCODE_HEADER;
+
+    extrudedLength = 0;
     for (int i = 0; i < slices.size(); i++){
         Slice slice = slices[i];
+        
         // shells first
-        WriteShells(file, slice.shells, slice.height);
+        WriteShells(file, slice.shells, layerHeight*(i+1));
         //then walls
-
+        WriteWalls(file, slice.outerWall, layerHeight*(i+1));
         //then infill
+        WriteInfill(file, slice.infill, layerHeight*(i+1));
 
     }
     file << GCODE_FOOTER;
@@ -202,18 +213,70 @@ void GCodeWriter::WriteShells(ofstream &file, vector<Clipper2Lib::PathsD> &shell
             //print the path
             for (int k = 1; k < path.size(); k++){
                 double distance = glm::distance(glm::vec2(path[k].x, path[k].y), glm::vec2(path[k-1].x, path[k-1].y));
-                double E = distance * width * layerHeight * extrusionVal;
+                double E = distance * width * layerHeight / extrusionVal;
                 extrudedLength += E;
                 string extruded = " E" + to_string(extrudedLength);
                 file << "G1 " << printSpeed << " X" << path[k].x + bedCenterX << " Y" << path[k].y + bedCenterY << extruded << "\n";
             }
 
             //close the path
-            float distance = glm::distance(glm::vec2(path[0].x, path[0].y), glm::vec2(path[path.size()-1].x, path[path.size()-1].y));
-            float E = distance * width * layerHeight * extrusionVal;
+            double distance = glm::distance(glm::vec2(path[0].x, path[0].y), glm::vec2(path[path.size()-1].x, path[path.size()-1].y));
+            double E = distance * width * layerHeight / extrusionVal;
             extrudedLength += E;
             file << "G1 " << printSpeed << " X" << path[0].x + bedCenterX << " Y" << path[0].y + bedCenterY << " E" << to_string(extrudedLength) << "\n";
         }
+    }
+}
+
+void GCodeWriter::WriteWalls(ofstream &file, Clipper2Lib::PathsD &walls, double height){
+    string speedString = "F" + to_string(this->speed*60);
+    string printSpeed = "F" + to_string(this->speed*30);
+    for (int i = 0; i < walls.size(); i++){
+        Clipper2Lib::PathD path = walls[i];
+        // go to start of path
+        file << "G0 " << speedString << " X" << path[0].x + bedCenterX << " Y" << path[0].y + bedCenterY << " Z" << height << "\n";
+        file << "G1 " << printSpeed << " E" << to_string(extrudedLength) << "\n";
+
+        //print the path
+        for (int k = 1; k < path.size(); k++){
+            double distance = glm::distance(glm::vec2(path[k].x, path[k].y), glm::vec2(path[k-1].x, path[k-1].y));
+            double E = distance * width * layerHeight / extrusionVal;
+            extrudedLength += E;
+            string extruded = " E" + to_string(extrudedLength);
+            file << "G1 " << printSpeed << " X" << path[k].x + bedCenterX << " Y" << path[k].y + bedCenterY << extruded << "\n";
+        }
+
+        //close the path
+        double distance = glm::distance(glm::vec2(path[0].x, path[0].y), glm::vec2(path[path.size()-1].x, path[path.size()-1].y));
+        double E = distance * width * layerHeight / extrusionVal;
+        extrudedLength += E;
+        file << "G1 " << printSpeed << " X" << path[0].x + bedCenterX << " Y" << path[0].y + bedCenterY << " E" << to_string(extrudedLength) << "\n";
+    }
+}
+
+void GCodeWriter::WriteInfill(ofstream &file, Clipper2Lib::PathsD &infill, double height){
+    string speedString = "F" + to_string(this->speed*60);
+    string printSpeed = "F" + to_string(this->speed*60);
+    for (int i = 0; i < infill.size(); i++){
+        Clipper2Lib::PathD path = infill[i];
+        // go to start of path
+        file << "G0 " << speedString << " X" << path[0].x + bedCenterX << " Y" << path[0].y + bedCenterY << " Z" << height << "\n";
+        file << "G1 " << printSpeed << " E" << to_string(extrudedLength) << "\n";
+
+        //print the path
+        for (int k = 1; k < path.size(); k++){
+            double distance = glm::distance(glm::vec2(path[k].x, path[k].y), glm::vec2(path[k-1].x, path[k-1].y));
+            double E = distance * width * layerHeight / extrusionVal;
+            extrudedLength += E;
+            string extruded = " E" + to_string(extrudedLength);
+            file << "G1 " << printSpeed << " X" << path[k].x + bedCenterX << " Y" << path[k].y + bedCenterY << extruded << "\n";
+        }
+
+        //close the path
+        double distance = glm::distance(glm::vec2(path[0].x, path[0].y), glm::vec2(path[path.size()-1].x, path[path.size()-1].y));
+        double E = distance * width * layerHeight / extrusionVal;
+        extrudedLength += E;
+        file << "G1 " << printSpeed << " X" << path[0].x + bedCenterX << " Y" << path[0].y + bedCenterY << " E" << to_string(extrudedLength) << "\n";
     }
 }
 

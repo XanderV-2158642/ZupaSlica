@@ -22,7 +22,7 @@ public:
     double GetSlicingPlaneHeight() { return slicingPlaneHeight; }
     void SetSlicingPlaneHeight(float height) { slicingPlaneHeight = height + 0.000000001; }
 
-    void SetLayerHeight(float height) { layerHeight = height; }
+    void SetLayerHeight(float height) { this->layerHeight = height; printf("Layer height: %f\n", layerHeight); }
     float GetLayerHeight() { return layerHeight; }
 
     void SetNozzleDiameter(float diameter) { nozzleDiameter = diameter; }

@@ -116,7 +116,7 @@ int main()
 
     // load models
     // -----------
-    Model ourModel("/home/xandervaes/Code/ZupaSlica/school_stuff/COFAB-models-set1/COFAB-models-set1/support-test.stl");
+    Model ourModel("/home/xandervaes/Code/ZupaSlica/school_stuff/COFAB-models-set1/COFAB-models-set1/hole-test(easy).stl");
 
     Intersection intersection = Intersection();
 
@@ -234,26 +234,25 @@ int main()
         // render your GUI
         ImGui::Begin("Inputs");
         {
-            //layer height
             float layerHeight = slicerSettings.GetLayerHeight();
-            ImGui::InputFloat("Layer height", &layerHeight, 0.02f, 0.1f, "%.2f mm");
+            float nozzleDiameter = slicerSettings.GetNozzleDiameter();
+            int shells = slicerSettings.GetShells();
+            float infillPercentage = slicerSettings.GetInfill();
+            //layer height
+            if(ImGui::InputFloat("Layer height", &layerHeight, 0.02f, 0.1f, "%.2f mm"))
+                slicerSettings.SetLayerHeight(layerHeight);
+
 
             //nozzle diameter
-            float nozzleDiameter = slicerSettings.GetNozzleDiameter();
-            ImGui::InputFloat("Nozzle diameter", &nozzleDiameter, 0.1f, 0.1f, "%.1f mm");
+            if(ImGui::InputFloat("Nozzle diameter", &nozzleDiameter, 0.1f, 0.1f, "%.1f mm"))
+                slicerSettings.SetNozzleDiameter(nozzleDiameter);
 
             // number of shells 
-            int shells = slicerSettings.GetShells();
-            ImGui::InputInt("Shells", &shells, 1, 1);
+            if(ImGui::InputInt("Shells", &shells, 1, 1))
+                slicerSettings.SetShells(shells);
 
-            float infillPercentage = slicerSettings.GetInfill();
-            if (ImGui::InputFloat("Infill percentage", &infillPercentage, 0.5f, 1.0f, "%.1f mm"))
-
-            // update settings
-            slicerSettings.SetLayerHeight(layerHeight);
-            slicerSettings.SetNozzleDiameter(nozzleDiameter);
-            slicerSettings.SetShells(shells);
-            slicerSettings.SetInfill(infillPercentage);
+            if(ImGui::InputFloat("Infill percentage", &infillPercentage, 0.5f, 1.0f, "%.1f mm"))
+                slicerSettings.SetInfill(infillPercentage);
             
 
             //slicing plane height
