@@ -116,7 +116,14 @@ int main()
 
     // load models
     // -----------
-    Model ourModel("/home/xandervaes/Code/ZupaSlica/school_stuff/COFAB-models-set1/COFAB-models-set1/hole-test(easy).stl");
+    Model ourModel("/home/xandervaes/Code/ZupaSlica/school_stuff/COFAB-models-set1/COFAB-models-set1/start.stl");
+
+    // move vertices up by lowest point
+    float lowest = DrawSTL::GetLowestPoint(ourModel);
+    for (int i = 0; i < ourModel.meshes[0].vertices.size(); i++)
+    {
+        ourModel.meshes[0].vertices[i].Position.z -= lowest;
+    }
 
     Intersection intersection = Intersection();
 
@@ -184,7 +191,7 @@ int main()
         Buildplate::Draw(BuildplateShader, buildPlate, view, projection, camera);
 
         //object
-        DrawSTL::Draw(objectShader, ourModel, view, projection, camera);
+        DrawSTL::Draw(objectShader, ourModel, view, projection, camera, lowest);
 
         //slice plane (draw last because it is transparent)
         float height = intersection.GetSlicingPlaneHeight(slicerSettings.GetLayerHeight());

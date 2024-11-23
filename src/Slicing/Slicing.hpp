@@ -24,7 +24,7 @@ public:
 
 vector<Slice> Slicing::SliceModel(vector<Vertex> model, SlicerSettings settings) {
     float layerHeight = settings.GetLayerHeight();
-    settings.SetSlicingPlaneHeight(layerHeight/2 + 0.000000001);
+    settings.SetSlicingPlaneHeight(layerHeight/2);
 
     vector<Slice> slices;
     bool nonEmpty = true;

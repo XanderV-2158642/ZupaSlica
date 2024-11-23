@@ -24,8 +24,8 @@ private:
     static bool IsIntersecting(vector<Vertex> &triangleVertices, float intersectionHeight);
     static void SortByHeight(vector<Vertex> &triangleVertices);
 
-    static vector<VertexPair> CalculatePairs(vector<Vertex> &vertices, float intersectionHeight);
-    static vector<VertexLine> CalculateLines(vector<VertexPair> &vertexPairs, float intersectionHeight);
+    static vector<VertexPair> CalculatePairs(vector<Vertex> &vertices, double intersectionHeight);
+    static vector<VertexLine> CalculateLines(vector<VertexPair> &vertexPairs);
     static void GroupLine(vector<VertexPair> &vertexPairs, VertexLine &line);
 
 
@@ -47,12 +47,7 @@ vector<VertexLine> CalculateIntersections::CalculateLines(vector<Vertex> &vertic
 
     vector<VertexPair> vertexPairs = CalculatePairs(vertices, intersectionHeight);
 
-    for (int i = 0; i < vertexPairs.size(); i++)
-    {
-        //printf("Pair %d: (%f, %f) - (%f, %f)\n", i, vertexPairs[i].v1.Position.x, vertexPairs[i].v1.Position.y, vertexPairs[i].v2.Position.x, vertexPairs[i].v2.Position.y);
-    }
-
-    vector<VertexLine> lines = CalculateLines(vertexPairs, intersectionHeight);   
+    vector<VertexLine> lines = CalculateLines(vertexPairs);   
 
     return lines;
 }
@@ -74,7 +69,7 @@ void CalculateIntersections::SortByHeight(vector<Vertex> &triangleVertices)
     });
 }
 
-vector<VertexPair> CalculateIntersections::CalculatePairs(vector<Vertex> &vertices, float intersectionHeight){
+vector<VertexPair> CalculateIntersections::CalculatePairs(vector<Vertex> &vertices, double intersectionHeight){
     vector<VertexPair> vertexPairs;
     // vertices are grouped by 3 creating a triangle
     for (int i = 0; i < vertices.size(); i += 3)
@@ -120,12 +115,12 @@ vector<VertexPair> CalculateIntersections::CalculatePairs(vector<Vertex> &vertic
     return vertexPairs;
 }
 
-vector<VertexLine> CalculateIntersections::CalculateLines(vector<VertexPair> &vertexPairs, float intersectionHeight)
+vector<VertexLine> CalculateIntersections::CalculateLines(vector<VertexPair> &vertexPairs)
 {
     // create a line for all connecting pairs
     vector<VertexLine> lines;
 
-    double epsilon = 0.05;
+    double epsilon = 0.0001;
     
     while (vertexPairs.size() > 0)
     {
@@ -194,7 +189,7 @@ Clipper2Lib::PathsD CalculateIntersections::CalculateClipperPaths(vector<Vertex>
     vector<VertexPair> vertexPairs = CalculatePairs(lines, intersectionHeight);
 
     // then group the pairs into lines
-    vector<VertexLine> vertexLines = CalculateLines(vertexPairs, intersectionHeight);
+    vector<VertexLine> vertexLines = CalculateLines(vertexPairs);
 
 
     //then convert each of the lines into a PathD for the clipper library
