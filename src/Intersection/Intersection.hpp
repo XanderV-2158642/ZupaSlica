@@ -62,18 +62,22 @@ void Intersection::DrawIntersection(float aspectRatio, SlicerSettings settings)
     }
     vector<float> outerWall = GetVertices(sliceMap[plane].outerWall, settings.GetBuildVolume().x);
     UpdateBuffers(outerWall);
-    Draw(intersectionShader, outerWall.size()/2, aspectRatio, glm::vec3(1.0f, 0.0f, 0.0f));
+    //Draw(intersectionShader, outerWall.size()/2, aspectRatio, glm::vec3(1.0f, 0.0f, 0.0f));
 
     for (int i = 0; i < sliceMap[plane].shells.size(); i++)
     {
         vector<float> shell = GetVertices(sliceMap[plane].shells[i], settings.GetBuildVolume().x);
         UpdateBuffers(shell);
-        Draw(intersectionShader, shell.size()/2, aspectRatio, glm::vec3(0.0f, 1.0f, 0.0f));
+        //Draw(intersectionShader, shell.size()/2, aspectRatio, glm::vec3(0.0f, 1.0f, 0.0f));
     }
 
     vector<float> infill = GetVertices(sliceMap[plane].infill, settings.GetBuildVolume().x);
     UpdateBuffers(infill);
-    Draw(intersectionShader, infill.size()/2, aspectRatio, glm::vec3(1.0f, 1.0f, 0.0f));
+    //Draw(intersectionShader, infill.size()/2, aspectRatio, glm::vec3(1.0f, 1.0f, 0.0f));
+
+    vector<float> surface = GetVertices(sliceMap[plane].surface, settings.GetBuildVolume().x);
+    UpdateBuffers(surface);
+    Draw(intersectionShader, surface.size()/2, aspectRatio, glm::vec3(0.0f, 0.0f, 1.0f));
 }
 
 
