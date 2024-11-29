@@ -116,7 +116,7 @@ int main()
 
     // load models
     // -----------
-    Model ourModel("/home/xandervaes/Code/ZupaSlica/school_stuff/COFAB-models-set1/COFAB-models-set1/start.stl");
+    Model ourModel("/home/xandervaes/Code/ZupaSlica/school_stuff/COFAB-models-set1/COFAB-models-set1/3DBenchy.stl");
 
     // move vertices up by lowest point
     float lowest = DrawSTL::GetLowestPoint(ourModel);

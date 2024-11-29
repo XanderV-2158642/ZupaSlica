@@ -47,7 +47,7 @@ Clipper2Lib::PathsD Surface::CalculateRoofs(Clipper2Lib::PathsD &curSlice, vecto
     }
     Clipper2Lib::PathsD result;
     result = Clipper2Lib::Difference(curSlice, adjacentSlices[0], Clipper2Lib::FillRule::EvenOdd);
-    FilterArtifacts(result, 0.32);
+    FilterArtifacts(result, 0.8);
     //Union result with surface
     surface = Clipper2Lib::Union(surface, result, Clipper2Lib::FillRule::EvenOdd);
     

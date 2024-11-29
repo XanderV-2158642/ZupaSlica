@@ -120,7 +120,7 @@ vector<VertexLine> CalculateIntersections::CalculateLines(vector<VertexPair> &ve
     // create a line for all connecting pairs
     vector<VertexLine> lines;
 
-    double epsilon = 0.0001;
+    double epsilon = 0.0000001;
     
     while (vertexPairs.size() > 0)
     {

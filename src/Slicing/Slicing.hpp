@@ -89,17 +89,6 @@ vector<Slice> Slicing::SliceModel(vector<Vertex> model, SlicerSettings settings)
         
         curSlice.surface = Surface::CalculateSurface(curSlice.innerWall, floorAdjacences, roofAdjacences );
         slices[i] = curSlice;
-        if (curSlice.surface.size() > 0)
-        {
-            printf("Surface found %d\n", i);
-            for (int j = 0; j < curSlice.surface.size(); j++)
-            {
-                for (int k = 0; k < curSlice.surface[j].size(); k++)
-                {
-                    printf("X: %f, Y: %f\n", curSlice.surface[j][k].x, curSlice.surface[j][k].y);
-                }
-            }
-        }
     } 
 
     return slices;
