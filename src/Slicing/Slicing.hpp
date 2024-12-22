@@ -7,6 +7,7 @@
 #include "Infill/CreateInfill.hpp"
 #include "../SlicerSettings/SlicerSettings.hpp"
 #include "Surface/Surface.hpp"
+#include "omp.h"
 
 struct Slice
 {
@@ -17,6 +18,8 @@ struct Slice
     Clipper2Lib::PathsD infill;
     Clipper2Lib::PathsD surfaceWall;
     Clipper2Lib::PathsD surface;
+    std::vector<Clipper2Lib::PathsD> roofAdjacences;
+    std::vector<Clipper2Lib::PathsD> floorAdjacences;
 };
 
 class Slicing 
@@ -30,6 +33,14 @@ vector<Slice> Slicing::SliceModel(vector<Vertex> model, SlicerSettings settings)
     float layerHeight = settings.GetLayerHeight();
     settings.SetSlicingPlaneHeight(layerHeight/2);
 
+    CreateInfill infillCreator;
+
+    // make infill once, then retrieve it for each slice
+    infillCreator.CreateDiagonalInfill(settings.GetInfill(), settings);
+    infillCreator.CreateSurfaceInfill(0, settings);
+    infillCreator.CreateSurfaceInfill(1, settings);
+
+
     vector<Slice> slices;
     bool nonEmpty = true;
     while (nonEmpty)
@@ -41,11 +52,11 @@ vector<Slice> Slicing::SliceModel(vector<Vertex> model, SlicerSettings settings)
             nonEmpty = false;
         }
         else
-        {
+        {            
             Slice slice;
             slice.height = settings.GetSlicingPlaneHeight();
             //erode outerWall by half the nozzle diameter
-            paths = Clipper2Lib::InflatePaths(paths, -settings.GetNozzleDiameter() / 2, Clipper2Lib::JoinType::Miter, Clipper2Lib::EndType::Polygon);
+            paths = Clipper2Lib::InflatePaths(paths, -settings.GetNozzleDiameter() / 2, Clipper2Lib::JoinType::Miter, Clipper2Lib::EndType::Polygon, 3);
             paths = Clipper2Lib::SimplifyPaths(paths, 0.00125);
             slice.outerWall = paths;
             slice.innerWall = paths;
@@ -71,56 +82,63 @@ vector<Slice> Slicing::SliceModel(vector<Vertex> model, SlicerSettings settings)
 
             slices.push_back(slice);
             //move the slicing plane up
+            
             settings.SetSlicingPlaneHeight(settings.GetSlicingPlaneHeight() + layerHeight);
         }
     }
+    
 
     // calculate surfaces
     for (int i = 0; i < slices.size(); i++)
     {
         Slice curSlice = slices[i];
-        vector<Clipper2Lib::PathsD> floorAdjacences;
-        vector<Clipper2Lib::PathsD> roofAdjacences;
         if (i < slices.size() - settings.GetRoofs())
         {
             for (int j = i + 1; j <= i + settings.GetRoofs(); j++)
             {
-                roofAdjacences.push_back(slices[j].innerWall);
+                curSlice.roofAdjacences.push_back(slices[j].innerWall);
             }
         } else {
-            roofAdjacences.push_back(Clipper2Lib::PathsD());
+            curSlice.roofAdjacences.push_back(Clipper2Lib::PathsD());
         }
 
         if (i >= settings.GetFloors())
         {
             for (int j = i - settings.GetFloors(); j < i; j++)
             {
-                floorAdjacences.push_back(slices[j].innerWall);
+                curSlice.floorAdjacences.push_back(slices[j].innerWall);
             }
         } else {
-            floorAdjacences.push_back(Clipper2Lib::PathsD());
+            curSlice.floorAdjacences.push_back(Clipper2Lib::PathsD());
         }
 
+        slices[i] = curSlice;
+    }
+
+    #pragma omp parallel for
+    for (int i = 0; i < slices.size(); i++)
+    {
+        Slice curSlice = slices[i];
 
         Clipper2Lib::PathsD offsettedInnerWall = Clipper2Lib::InflatePaths(curSlice.innerWall, -settings.GetNozzleDiameter(), Clipper2Lib::JoinType::Miter, Clipper2Lib::EndType::Polygon);
         
-        curSlice.surfaceWall = Surface::CalculateSurface(offsettedInnerWall, floorAdjacences, roofAdjacences);
-        Clipper2Lib::PathsD sparseInfillClipArea = Surface::CalculateSurface(curSlice.innerWall, floorAdjacences, roofAdjacences);
+        curSlice.surfaceWall = Surface::CalculateSurface(offsettedInnerWall, curSlice.floorAdjacences, curSlice.roofAdjacences);
+        Clipper2Lib::PathsD sparseInfillClipArea = Surface::CalculateSurface(curSlice.innerWall, curSlice.floorAdjacences, curSlice.roofAdjacences);
 
-
-        //calculate surfaceInfill
-        Clipper2Lib::PathsD surfaceInfill = CreateInfill::CreateSurfaceInfill(i, settings); 
-        Clipper2Lib::PathsD inflatedWall = Clipper2Lib::InflatePaths(curSlice.surfaceWall, -settings.GetNozzleDiameter() / 2, Clipper2Lib::JoinType::Miter, Clipper2Lib::EndType::Polygon);
-        curSlice.surface = CreateInfill::ClipInfill(surfaceInfill, inflatedWall);
 
         //generate infill
         //Take difference of innerwall sparseInfillClipArea
-        curSlice.infill = CreateInfill::CreateDiagonalInfill(settings.GetInfill(), settings);
+        curSlice.infill = infillCreator.GetInfill();
 
         //calculate clipping area
         Clipper2Lib::PathsD sparseInfillClip = Clipper2Lib::Difference(curSlice.innerWall, sparseInfillClipArea, Clipper2Lib::FillRule::EvenOdd);
-        curSlice.infill = CreateInfill::ClipInfill(curSlice.infill, sparseInfillClip);
+        curSlice.infill = infillCreator.ClipInfill(curSlice.infill, sparseInfillClip);
 
+
+        //calculate surfaceInfill
+        Clipper2Lib::PathsD surfaceInfill = infillCreator.GetSurface();
+        Clipper2Lib::PathsD inflatedWall = Clipper2Lib::InflatePaths(curSlice.surfaceWall, -settings.GetNozzleDiameter() / 2, Clipper2Lib::JoinType::Miter, Clipper2Lib::EndType::Polygon);
+        curSlice.surface = infillCreator.ClipInfill(surfaceInfill, inflatedWall);
         slices[i] = curSlice;
     }
 

@@ -22,6 +22,7 @@
 #include "Slicing/Gcode/GcodeWriter.hpp"
 #include "Slicing/Slicing.hpp"
 #include "Slicing/Infill/CreateInfill.hpp"
+#include <time.h>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
@@ -55,7 +56,6 @@ bool rescale = false;
 
 int main()
 {
-    Clipper2Lib::TestLib::Test();
     // glfw: initialize and configure
     // ------------------------------
     glfwInit();
@@ -134,8 +134,6 @@ int main()
 
     // uncomment this call to draw in wireframe polygons.
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-    printf("Amount of meshes: %d\n", ourModel.meshes.size());
 
     //imgui
     IMGUI_CHECKVERSION();
@@ -285,16 +283,18 @@ int main()
 
             // button to calculate intersection
             if (ImGui::Button("Slice")) {
-                printf("Slicing\n");
+                time_t start, end;
+                time(&start);
                 vector<Slice> sliceMap = Slicing::SliceModel(ourModel.meshes[0].vertices, slicerSettings);
+                time(&end);
+                double dif = difftime(end, start);
+                printf("Elapsed time is %.2lf seconds.\n", dif);
                 intersection.SetSliceMap(sliceMap);
             }
 
             // button to export to gcode
             if (ImGui::Button("Export to Gcode")) {
-                printf("Export to Gcode\n");
                 vector<Slice> slices = intersection.GetSliceMap();
-
                 gcodeWriter.WriteGCode("/home/xandervaes/Code/ZupaSlica/GCodeOut", slices);
             }
         } 
@@ -383,8 +383,6 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     // make sure the viewport matches the new window dimensions; note that width and 
     // height will be significantly larger than specified on retina displays.
     glViewport(0, 0, width, height);
-    printf("Resizing\n");
-    printf ("Width: %d, Height: %d\n", width, height);
     SCR_WIDTH = width;
     SCR_HEIGHT = height;
     resizeBuffer = true;

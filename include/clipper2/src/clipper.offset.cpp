@@ -642,8 +642,4 @@ void ClipperOffset::Execute(DeltaCallback64 delta_cb, Paths64& paths)
 	Execute(1.0, paths);
 }
 
-void TestLib::Test(){
-	printf("TestLib::Test\n");
-}
-
 } // namespace

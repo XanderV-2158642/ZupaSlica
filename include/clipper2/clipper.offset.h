@@ -120,10 +120,6 @@ public:
 
 };
 
-class TestLib {
-public:
-	static void Test();
-};
 
 
 }

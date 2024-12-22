@@ -2,10 +2,24 @@ cmake_minimum_required(VERSION 3.5.0)
 project(ZupaSlica VERSION 0.1.0 LANGUAGES C CXX)
 
 
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
+set(CMAKE_CXX_FLAGS_DEBUG "-g")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+
 link_directories(/usr/local/lib)
 link_directories(/home/xandervaes/dev/assimp/bin)
 
-set(LIBS glfw assimp)
+
+
+
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+set(LIBS PUBLIC glfw assimp OpenMP::OpenMP_CXX)
+endif()
+
 
 set(IMGUI include/imgui/imgui.cpp
            include/imgui/imgui_demo.cpp

@@ -7,14 +7,19 @@
 class CreateInfill
 {
 private:
+    Clipper2Lib::PathsD infill;
+    Clipper2Lib::PathsD surface;
 public:
-    static Clipper2Lib::PathsD CreateRectInfill(float density, SlicerSettings settings);
-    static Clipper2Lib::PathsD CreateDiagonalInfill(float density, SlicerSettings settings);
-    static Clipper2Lib::PathsD CreateSurfaceInfill(int evenOdd, SlicerSettings settings);
-    static Clipper2Lib::PathsD ClipInfill(Clipper2Lib::PathsD &infill, Clipper2Lib::PathsD &Clip);
+    void CreateRectInfill(float density, SlicerSettings settings);
+    void CreateDiagonalInfill(float density, SlicerSettings settings);
+    void CreateSurfaceInfill(int evenOdd, SlicerSettings settings);
+
+    Clipper2Lib::PathsD GetInfill() { return infill; }
+    Clipper2Lib::PathsD GetSurface() { return surface; }
+    Clipper2Lib::PathsD ClipInfill(Clipper2Lib::PathsD &infill, Clipper2Lib::PathsD &Clip);
 };
 
-Clipper2Lib::PathsD CreateInfill::CreateRectInfill(float density, SlicerSettings settings){
+void CreateInfill::CreateRectInfill(float density, SlicerSettings settings){
     Clipper2Lib::PathsD paths;
 
     //convert density to a percentage
@@ -57,10 +62,10 @@ Clipper2Lib::PathsD CreateInfill::CreateRectInfill(float density, SlicerSettings
         paths.push_back(path);
     }
 
-    return paths;
+    this->infill = paths; 
 }
 
-Clipper2Lib::PathsD CreateInfill::CreateDiagonalInfill(float density, SlicerSettings settings){
+void CreateInfill::CreateDiagonalInfill(float density, SlicerSettings settings){
     Clipper2Lib::PathsD paths;
 
     //convert density to a percentage
@@ -126,10 +131,10 @@ Clipper2Lib::PathsD CreateInfill::CreateDiagonalInfill(float density, SlicerSett
         }
     }
 
-    return paths;
+    this->infill = paths;
 }
 
-Clipper2Lib::PathsD CreateInfill::CreateSurfaceInfill(int evenOdd, SlicerSettings settings){
+void CreateInfill::CreateSurfaceInfill(int evenOdd, SlicerSettings settings){
     Clipper2Lib::PathsD paths;
 
     // check if even or odd
@@ -198,7 +203,7 @@ Clipper2Lib::PathsD CreateInfill::CreateSurfaceInfill(int evenOdd, SlicerSetting
         }
     }
 
-    return paths;
+    this->surface = paths;
 }
 
 Clipper2Lib::PathsD CreateInfill::ClipInfill(Clipper2Lib::PathsD &infill, Clipper2Lib::PathsD &Clip){
