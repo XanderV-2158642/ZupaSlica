@@ -10,6 +10,7 @@ private:
 public:
     static Clipper2Lib::PathsD CreateRectInfill(float density, SlicerSettings settings);
     static Clipper2Lib::PathsD CreateDiagonalInfill(float density, SlicerSettings settings);
+    static Clipper2Lib::PathsD CreateSurfaceInfill(int evenOdd, SlicerSettings settings);
     static Clipper2Lib::PathsD ClipInfill(Clipper2Lib::PathsD &infill, Clipper2Lib::PathsD &Clip);
 };
 
@@ -89,7 +90,6 @@ Clipper2Lib::PathsD CreateInfill::CreateDiagonalInfill(float density, SlicerSett
     float x_component = spacing * spacing / 2;
 
 
-
     //draw lines
     for (int i = 0; i < lines; i++)
     {
@@ -126,7 +126,78 @@ Clipper2Lib::PathsD CreateInfill::CreateDiagonalInfill(float density, SlicerSett
         }
     }
 
-    
+    return paths;
+}
+
+Clipper2Lib::PathsD CreateInfill::CreateSurfaceInfill(int evenOdd, SlicerSettings settings){
+    Clipper2Lib::PathsD paths;
+
+    // check if even or odd
+    bool isEven = evenOdd % 2 == 0;
+
+    //formula for rect infill density
+    // spacing = nozzleDiameter / density
+    float spacing = settings.GetNozzleDiameter();
+
+    // number of lines in x direction
+    int xLines = settings.GetBuildVolume().x / spacing;
+
+    // number of lines in y direction
+    int yLines = settings.GetBuildVolume().y / spacing;
+
+    float minX = -settings.GetBuildVolume().x/2;
+    float minY = -settings.GetBuildVolume().y/2;
+    float maxX = settings.GetBuildVolume().x/2;
+    float maxY = settings.GetBuildVolume().y/2;
+
+    float maxDist = max((maxY-minY), (maxX-minX));
+
+    // calc the amount of lines needed
+    int lines = maxDist / spacing;
+    std::cout << "Lines: " << lines << std::endl;
+
+    // calc manhattan values according to pythagorean theorem
+    // a^2 + b^2 = c^2
+    float x_component = spacing * spacing / 2;
+
+
+    // draw lines
+    for (int i = 0; i < lines; i++)
+    { 
+        if (isEven){
+            Clipper2Lib::PathD path;
+            // start point is at min x
+            path.push_back(Clipper2Lib::PointD(-maxDist/2 - x_component*i, -maxDist/2 + x_component*i));
+            // end point is at max x
+            path.push_back(Clipper2Lib::PointD(maxDist/2 - x_component*i, maxDist/2 + x_component*i));
+            paths.push_back(path);
+
+            if (i != 0) {
+                Clipper2Lib::PathD path2;
+                // start point is at min x
+                path2.push_back(Clipper2Lib::PointD(-maxDist/2 + x_component*i, -maxDist/2 - x_component*i));
+                // end point is at max x
+                path2.push_back(Clipper2Lib::PointD(maxDist/2 + x_component*i, maxDist/2 - x_component*i));
+                paths.push_back(path2);
+            }
+        } else {
+            Clipper2Lib::PathD path3;
+            // start point is at min x
+            path3.push_back(Clipper2Lib::PointD(-maxDist/2 + x_component*i, maxDist/2 + x_component*i));
+            // end point is at max x
+            path3.push_back(Clipper2Lib::PointD(maxDist/2 + x_component*i, -maxDist/2 + x_component*i));
+            paths.push_back(path3);
+
+            if (i != 0) {
+                Clipper2Lib::PathD path4;
+                // start point is at min x
+                path4.push_back(Clipper2Lib::PointD(-maxDist/2 - x_component*i, maxDist/2 - x_component*i));
+                // end point is at max x
+                path4.push_back(Clipper2Lib::PointD(maxDist/2 - x_component*i, -maxDist/2 - x_component*i));
+                paths.push_back(path4);
+            }
+        }
+    }
 
     return paths;
 }

@@ -244,6 +244,8 @@ int main()
             float layerHeight = slicerSettings.GetLayerHeight();
             float nozzleDiameter = slicerSettings.GetNozzleDiameter();
             int shells = slicerSettings.GetShells();
+            int roofs = slicerSettings.GetRoofs();
+            int floors = slicerSettings.GetFloors();
             float infillPercentage = slicerSettings.GetInfill();
             //layer height
             if(ImGui::InputFloat("Layer height", &layerHeight, 0.02f, 0.1f, "%.2f mm"))
@@ -258,15 +260,22 @@ int main()
             if(ImGui::InputInt("Shells", &shells, 1, 1))
                 slicerSettings.SetShells(shells);
 
+
+            if (ImGui::InputInt("Number of roofs", &roofs, 1, 1))
+                slicerSettings.SetRoofs(roofs);
+            
+            if (ImGui::InputInt("Number of floors", &floors, 1, 1))
+                slicerSettings.SetFloors(floors);
+
             if(ImGui::InputFloat("Infill percentage", &infillPercentage, 0.5f, 1.0f, "%.1f mm"))
                 slicerSettings.SetInfill(infillPercentage);
             
 
             //slicing plane height
             int shownPlane = intersection.GetHeight();
-            if(ImGui::SliderInt("Slicing plane height", &shownPlane, 0, intersection.GetMaxHeight()-1)){
+            if(ImGui::SliderInt("Slicing plane height", &shownPlane, 0, intersection.GetMaxHeight()-1))
                 intersection.SetHeight(shownPlane);
-            }
+            
             
 
             // button to calculate intersection

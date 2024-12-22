@@ -17,6 +17,8 @@ private:
     float nozzleDiameter; //mm
     int shells;
     float infill; //percentage
+    int roofs;
+    int floors;
 
 public:
     double GetSlicingPlaneHeight() { return slicingPlaneHeight; }
@@ -34,6 +36,12 @@ public:
     void SetInfill(float inf) {infill = inf;}
     float GetInfill(){return infill;}
 
+    void SetRoofs(int roof) { roofs = roof; }
+    int GetRoofs() { return roofs; }
+
+    void SetFloors(int floor) { floors = floor; }
+    int GetFloors() { return floors; }
+
     void SetBuildVolume(BuildVolume volume) { buildVolume = volume; }
     BuildVolume GetBuildVolume() { return buildVolume; }
 
@@ -41,11 +49,9 @@ public:
     ~SlicerSettings();
 };
 
-SlicerSettings::SlicerSettings() : slicingPlaneHeight(0.000000001) , layerHeight(0.2f), nozzleDiameter(0.4f), shells(2), buildVolume({220,220,250}), infill(20)
+SlicerSettings::SlicerSettings() : slicingPlaneHeight(0.000000001) , layerHeight(0.2f), nozzleDiameter(0.4f), shells(2), buildVolume({220,220,250}), infill(20), roofs(3), floors(3)
 {
 }
-
-
 
 
 SlicerSettings::~SlicerSettings()

@@ -75,6 +75,10 @@ void Intersection::DrawIntersection(float aspectRatio, SlicerSettings settings)
     UpdateBuffers(infill);
     Draw(intersectionShader, infill.size()/2, aspectRatio, glm::vec3(1.0f, 1.0f, 0.0f));
 
+    vector<float> surfaceWall = GetVertices(sliceMap[plane].surfaceWall, settings.GetBuildVolume().x);
+    UpdateBuffers(surfaceWall);
+    Draw(intersectionShader, surfaceWall.size()/2, aspectRatio, glm::vec3(0.0f, 0.0f, 1.0f));
+
     vector<float> surface = GetVertices(sliceMap[plane].surface, settings.GetBuildVolume().x);
     UpdateBuffers(surface);
     Draw(intersectionShader, surface.size()/2, aspectRatio, glm::vec3(0.0f, 0.0f, 1.0f));

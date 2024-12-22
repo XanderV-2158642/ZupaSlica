@@ -15,6 +15,7 @@ struct Slice
     Clipper2Lib::PathsD innerWall; //inner wall is a part of shell, but is not considered in the printing process, it is just the last shell, but it is easier to reference like this when clipping the infill
     std::vector<Clipper2Lib::PathsD> shells;
     Clipper2Lib::PathsD infill;
+    Clipper2Lib::PathsD surfaceWall;
     Clipper2Lib::PathsD surface;
 };
 
@@ -65,10 +66,8 @@ vector<Slice> Slicing::SliceModel(vector<Vertex> model, SlicerSettings settings)
             //set inner wall
             slice.innerWall = lastPaths;
 
-            //add infill
-            Clipper2Lib::PathsD infill = CreateInfill::CreateDiagonalInfill(settings.GetInfill(), settings);
-            infill = CreateInfill::ClipInfill(infill, slice.innerWall);
-            slice.infill = infill;
+            
+            slice.infill = Clipper2Lib::PathsD();
 
             slices.push_back(slice);
             //move the slicing plane up
@@ -82,14 +81,38 @@ vector<Slice> Slicing::SliceModel(vector<Vertex> model, SlicerSettings settings)
         Slice curSlice = slices[i];
         vector<Clipper2Lib::PathsD> floorAdjacences;
         vector<Clipper2Lib::PathsD> roofAdjacences;
-        if (i < slices.size() - 1)
+        if (i < slices.size() - settings.GetRoofs())
         {
-            roofAdjacences.push_back(slices[i + 1].innerWall);
+            for (int j = i + 1; j <= i + settings.GetRoofs(); j++)
+            {
+                roofAdjacences.push_back(slices[j].innerWall);
+            }
+        } else {
+            roofAdjacences.push_back(Clipper2Lib::PathsD());
         }
+
+        if (i >= settings.GetFloors())
+        {
+            for (int j = i - settings.GetFloors(); j < i; j++)
+            {
+                floorAdjacences.push_back(slices[j].innerWall);
+            }
+        } else {
+            floorAdjacences.push_back(Clipper2Lib::PathsD());
+        }
+
+
+        Clipper2Lib::PathsD offsettedInnerWall = Clipper2Lib::InflatePaths(curSlice.innerWall, -settings.GetNozzleDiameter(), Clipper2Lib::JoinType::Miter, Clipper2Lib::EndType::Polygon);
         
-        curSlice.surface = Surface::CalculateSurface(curSlice.innerWall, floorAdjacences, roofAdjacences );
+        curSlice.surfaceWall = Surface::CalculateSurface(offsettedInnerWall, floorAdjacences, roofAdjacences);
+
+        //calculate surfaceInfill
+        Clipper2Lib::PathsD surfaceInfill = CreateInfill::CreateSurfaceInfill(i, settings); 
+        Clipper2Lib::PathsD inflatedWall = Clipper2Lib::InflatePaths(curSlice.surfaceWall, -settings.GetNozzleDiameter() / 2, Clipper2Lib::JoinType::Miter, Clipper2Lib::EndType::Polygon);
+        curSlice.surface = CreateInfill::ClipInfill(surfaceInfill, inflatedWall);
+
         slices[i] = curSlice;
-    } 
+    }
 
     return slices;
 }
