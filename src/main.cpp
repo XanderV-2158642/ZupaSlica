@@ -116,14 +116,19 @@ int main()
 
     // load models
     // -----------
-    Model ourModel("/home/xandervaes/Code/ZupaSlica/school_stuff/COFAB-models-set1/COFAB-models-set1/3DBenchy.stl");
+    Model ourModel("/home/xandervaes/Code/ZupaSlica/school_stuff/COFAB-models-set1/COFAB-models-set1/start.stl");
 
     // move vertices up by lowest point
     float lowest = DrawSTL::GetLowestPoint(ourModel);
+    glm::vec3 center = DrawSTL::GetXYCenterPoint(ourModel);
     for (int i = 0; i < ourModel.meshes[0].vertices.size(); i++)
     {
         ourModel.meshes[0].vertices[i].Position.z -= lowest;
+        ourModel.meshes[0].vertices[i].Position.x -= center.x;
+        ourModel.meshes[0].vertices[i].Position.y -= center.y;
     }
+
+    glm::vec3 translation = glm::vec3(center.x, center.y, lowest);
 
     Intersection intersection = Intersection();
 
@@ -191,7 +196,7 @@ int main()
         Buildplate::Draw(BuildplateShader, buildPlate, view, projection, camera);
 
         //object
-        DrawSTL::Draw(objectShader, ourModel, view, projection, camera, lowest);
+        DrawSTL::Draw(objectShader, ourModel, view, projection, camera, translation);
 
         //slice plane (draw last because it is transparent)
         float height = intersection.GetSlicingPlaneHeight(slicerSettings.GetLayerHeight());

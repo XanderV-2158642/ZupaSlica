@@ -154,7 +154,6 @@ Clipper2Lib::PathsD CreateInfill::CreateSurfaceInfill(int evenOdd, SlicerSetting
 
     // calc the amount of lines needed
     int lines = maxDist / spacing;
-    std::cout << "Lines: " << lines << std::endl;
 
     // calc manhattan values according to pythagorean theorem
     // a^2 + b^2 = c^2

@@ -105,11 +105,21 @@ vector<Slice> Slicing::SliceModel(vector<Vertex> model, SlicerSettings settings)
         Clipper2Lib::PathsD offsettedInnerWall = Clipper2Lib::InflatePaths(curSlice.innerWall, -settings.GetNozzleDiameter(), Clipper2Lib::JoinType::Miter, Clipper2Lib::EndType::Polygon);
         
         curSlice.surfaceWall = Surface::CalculateSurface(offsettedInnerWall, floorAdjacences, roofAdjacences);
+        Clipper2Lib::PathsD sparseInfillClipArea = Surface::CalculateSurface(curSlice.innerWall, floorAdjacences, roofAdjacences);
+
 
         //calculate surfaceInfill
         Clipper2Lib::PathsD surfaceInfill = CreateInfill::CreateSurfaceInfill(i, settings); 
         Clipper2Lib::PathsD inflatedWall = Clipper2Lib::InflatePaths(curSlice.surfaceWall, -settings.GetNozzleDiameter() / 2, Clipper2Lib::JoinType::Miter, Clipper2Lib::EndType::Polygon);
         curSlice.surface = CreateInfill::ClipInfill(surfaceInfill, inflatedWall);
+
+        //generate infill
+        //Take difference of innerwall sparseInfillClipArea
+        curSlice.infill = CreateInfill::CreateDiagonalInfill(settings.GetInfill(), settings);
+
+        //calculate clipping area
+        Clipper2Lib::PathsD sparseInfillClip = Clipper2Lib::Difference(curSlice.innerWall, sparseInfillClipArea, Clipper2Lib::FillRule::EvenOdd);
+        curSlice.infill = CreateInfill::ClipInfill(curSlice.infill, sparseInfillClip);
 
         slices[i] = curSlice;
     }
