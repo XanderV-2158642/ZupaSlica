@@ -23,6 +23,7 @@
 #include "Slicing/Slicing.hpp"
 #include "Slicing/Infill/CreateInfill.hpp"
 #include <time.h>
+#include "PathOptimization/PathOptimization.hpp"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
@@ -116,7 +117,7 @@ int main()
 
     // load models
     // -----------
-    Model ourModel("/home/xandervaes/Code/ZupaSlica/school_stuff/COFAB-models-set1/COFAB-models-set1/start.stl");
+    Model ourModel("/home/xandervaes/Code/ZupaSlica/school_stuff/COFAB-models-set1/COFAB-models-set1/3DBenchy.stl");
 
     // move vertices up by lowest point
     float lowest = DrawSTL::GetLowestPoint(ourModel);
@@ -289,7 +290,10 @@ int main()
                 time(&end);
                 double dif = difftime(end, start);
                 printf("Elapsed time is %.2lf seconds.\n", dif);
-                intersection.SetSliceMap(sliceMap);
+                PathOptimization optimizer(sliceMap);
+                optimizer.OptimizePaths();
+                vector<Slice> optimizedSlices = optimizer.GetSlices();
+                intersection.SetSliceMap(optimizedSlices);
             }
 
             // button to export to gcode

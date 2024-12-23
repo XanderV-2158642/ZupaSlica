@@ -62,7 +62,7 @@ Clipper2Lib::PathsD Surface::CalculateSliceSurface(Clipper2Lib::PathsD &curSlice
     Clipper2Lib::PathsD adjacentIntersected = IntersectAdjacentSlices(adjacentSlices);
     Clipper2Lib::PathsD result =  Clipper2Lib::Difference(curSlice, adjacentIntersected, Clipper2Lib::FillRule::EvenOdd);
 
-    FilterArtifacts(result, 0.8);
+    FilterArtifacts(result, 0.2);
     //Union result with surface
     surface = Clipper2Lib::Union(surface, result, Clipper2Lib::FillRule::EvenOdd);
     

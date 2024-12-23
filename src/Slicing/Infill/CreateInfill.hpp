@@ -8,14 +8,21 @@ class CreateInfill
 {
 private:
     Clipper2Lib::PathsD infill;
-    Clipper2Lib::PathsD surface;
+    Clipper2Lib::PathsD evenSurface;
+    Clipper2Lib::PathsD oddSurface;
 public:
     void CreateRectInfill(float density, SlicerSettings settings);
     void CreateDiagonalInfill(float density, SlicerSettings settings);
     void CreateSurfaceInfill(int evenOdd, SlicerSettings settings);
 
     Clipper2Lib::PathsD GetInfill() { return infill; }
-    Clipper2Lib::PathsD GetSurface() { return surface; }
+    Clipper2Lib::PathsD GetSurface(int i) { 
+        if (i%2 == 0) {
+            return evenSurface;
+        } else {
+            return oddSurface;
+        }
+    }
     Clipper2Lib::PathsD ClipInfill(Clipper2Lib::PathsD &infill, Clipper2Lib::PathsD &Clip);
 };
 
@@ -162,8 +169,10 @@ void CreateInfill::CreateSurfaceInfill(int evenOdd, SlicerSettings settings){
 
     // calc manhattan values according to pythagorean theorem
     // a^2 + b^2 = c^2
-    float x_component = spacing * spacing / 2;
-
+    // 2a² = c²
+    // a² = c² / 2
+    // a = sqrt(c² / 2)
+    float x_component = sqrt(spacing * spacing / 2);
 
     // draw lines
     for (int i = 0; i < lines; i++)
@@ -203,7 +212,11 @@ void CreateInfill::CreateSurfaceInfill(int evenOdd, SlicerSettings settings){
         }
     }
 
-    this->surface = paths;
+    if (isEven) {
+        this->evenSurface = paths;
+    } else {
+        this->oddSurface = paths;
+    }
 }
 
 Clipper2Lib::PathsD CreateInfill::ClipInfill(Clipper2Lib::PathsD &infill, Clipper2Lib::PathsD &Clip){

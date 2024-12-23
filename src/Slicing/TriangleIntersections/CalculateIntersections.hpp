@@ -34,7 +34,7 @@ private:
 public:
     static vector<VertexLine> CalculateLines(vector<Vertex> &vertices, float intersectionHeight);
 
-    static Clipper2Lib::PathsD CalculateClipperPaths(vector<Vertex> &lines, SlicerSettings settings);
+    static Clipper2Lib::PathsD CalculateClipperPaths(vector<Vertex> &lines, SlicerSettings settings, double intersectionHeight);
 };
 
 vector<VertexLine> CalculateIntersections::CalculateLines(vector<Vertex> &vertices, float intersectionHeight)
@@ -182,9 +182,8 @@ vector<VertexLine> CalculateIntersections::CalculateLines(vector<VertexPair> &ve
     return lines;
 }
 
-Clipper2Lib::PathsD CalculateIntersections::CalculateClipperPaths(vector<Vertex> &lines, SlicerSettings settings)
+Clipper2Lib::PathsD CalculateIntersections::CalculateClipperPaths(vector<Vertex> &lines, SlicerSettings settings, double intersectionHeight)
 {
-    double intersectionHeight = settings.GetSlicingPlaneHeight();
     // first find all triangle intersecting lines using the calculatePairs function
     vector<VertexPair> vertexPairs = CalculatePairs(lines, intersectionHeight);
 
