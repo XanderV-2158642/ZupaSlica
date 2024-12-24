@@ -74,6 +74,10 @@ private:
 
     double extrudedLength = 0;
 
+    bool retract = true;
+    double retractionLength = 5.0;
+    double retractionSpeed = 2700;
+
     SlicerSettings* settings;
 
     void UpdateParams()
@@ -214,6 +218,9 @@ void GCodeWriter::WriteShells(ofstream &file, vector<Clipper2Lib::PathsD> &shell
             Clipper2Lib::PathD path = shells[i][j];
             // go to start of path
             file << "G0 " << speedString << " X" << path[0].x + bedCenterX << " Y" << path[0].y + bedCenterY << " Z" << height << "\n";
+            if (retract){
+                extrudedLength += retractionLength;
+            }
             file << "G1 " << printSpeed << " E" << to_string(extrudedLength) << "\n";
 
             //print the path
@@ -230,6 +237,12 @@ void GCodeWriter::WriteShells(ofstream &file, vector<Clipper2Lib::PathsD> &shell
             double E = distance * width * layerHeight / extrusionVal;
             extrudedLength += E;
             file << "G1 " << printSpeed << " X" << path[0].x + bedCenterX << " Y" << path[0].y + bedCenterY << " E" << to_string(extrudedLength) << "\n";
+
+            //retract
+            if (retract){
+                extrudedLength -= retractionLength;
+                file << "G1 E" << to_string(extrudedLength) << " F" << to_string(retractionSpeed) << "\n";
+            }
         }
     }
 }
