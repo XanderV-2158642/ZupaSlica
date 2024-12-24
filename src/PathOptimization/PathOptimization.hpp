@@ -67,20 +67,19 @@ Clipper2Lib::PathsD PathOptimization::SortPaths(Clipper2Lib::PathsD paths) {
     sortedPaths.push_back(paths[0]); // start with the first path
     paths.erase(paths.begin());
 
-
     while (paths.size() > 0){
         // path is a vector of 2 points, start and end.
         Clipper2Lib::PointD EndPoint = sortedPaths[sortedPaths.size()-1][1]; // endpoint is the end of the last path
         double closestDistance = sqrt(pow(EndPoint.x - paths[0][0].x, 2) + pow(EndPoint.y - paths[0][0].y, 2));
         int closestIndex = 0;
         bool reverse = false;
-        for (int i = 1; i < paths.size(); i++){
+        for (int i = 0; i < paths.size(); i++){
             Clipper2Lib::PointD nextStart = paths[i][0];
             double distance = sqrt(pow(EndPoint.x - nextStart.x, 2) + pow(EndPoint.y - nextStart.y, 2));
             if (distance < closestDistance){
                 closestDistance = distance;
                 closestIndex = i;
-                reverse = true;
+                reverse = false;
             }
 
             Clipper2Lib::PointD nextEnd = paths[i][paths[i].size()-1];
@@ -88,7 +87,7 @@ Clipper2Lib::PathsD PathOptimization::SortPaths(Clipper2Lib::PathsD paths) {
             if (distance < closestDistance){
                 closestDistance = distance;
                 closestIndex = i;
-                reverse = false;
+                reverse = true;
             }
         }
 
