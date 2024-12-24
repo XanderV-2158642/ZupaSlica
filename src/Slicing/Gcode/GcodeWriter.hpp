@@ -208,6 +208,17 @@ void GCodeWriter::WriteGCode(const char *dirname, vector<Slice> &slices) {
         //then infill
         WriteInfill(file, slice.infill, layerHeight*(i+1));
 
+        // turn on fan in the first three layers
+        if (i == 0){
+            file << "M106 S85;fan on \n";
+        }
+        if (i == 1){
+            file << "M106 S170 ;fan on \n";
+        }
+        if (i == 2){
+            file << "M106 S255 ;fan on \n";
+        }
+
     }
     file << GCODE_FOOTER;
 
