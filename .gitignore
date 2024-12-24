@@ -5,3 +5,5 @@ CMakePresets.json
 files
 OutSTL
 GCodeOut
+debug
+
