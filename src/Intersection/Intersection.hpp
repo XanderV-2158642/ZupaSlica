@@ -96,6 +96,17 @@ void Intersection::DrawIntersection(float aspectRatio, SlicerSettings settings)
 		UpdateBuffers(surface);
 		Draw(intersectionShader, surface.size()/2, aspectRatio, glm::vec3(0.0f, 0.0f, 1.0f));
 	}
+
+    for (int i = 0; i < sliceMap[plane].skirt.size(); i++)
+    {
+        vector<float> skirt = GetVertices(sliceMap[plane].skirt[i], settings.GetBuildVolume().x);
+        if (skirt.size() <= 0)
+        {
+            continue;
+        }
+        UpdateBuffers(skirt);
+        Draw(intersectionShader, skirt.size() / 2, aspectRatio, glm::vec3(0.0f, 1.0f, 1.0f));
+    }
 }
 
 

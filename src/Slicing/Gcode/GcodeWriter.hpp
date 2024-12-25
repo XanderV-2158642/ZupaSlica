@@ -93,6 +93,7 @@ private:
         bedCenterY = settings->GetBuildVolume().y / 2;
     }
 
+    void WriteSkirt(ofstream& file, vector<Clipper2Lib::PathsD>& skirts, double height);
     void WriteShells(ofstream &file, vector<Clipper2Lib::PathsD> &shells, double height);
     void WriteWalls(ofstream &file, Clipper2Lib::PathsD &walls, double height);
     void WriteInfill(ofstream &file, Clipper2Lib::PathsD &infill, double height);
@@ -197,6 +198,8 @@ void GCodeWriter::WriteGCode(string dirname, vector<Slice> &slices) {
     for (int i = 0; i < slices.size(); i++){
         Slice slice = slices[i];
         
+        // skirt or brim first
+        WriteSkirt(file, slice.skirt, layerHeight * (i + 1));
         // shells first
         WriteShells(file, slice.shells, layerHeight*(i+1));
         //then walls
@@ -223,7 +226,41 @@ void GCodeWriter::WriteGCode(string dirname, vector<Slice> &slices) {
     file << GCODE_FOOTER;
 
     file.close();
-} 
+}
+
+void GCodeWriter::WriteSkirt(ofstream& file, vector<Clipper2Lib::PathsD>& skirts, double height){
+    if (skirts.size() == 0){
+		return;
+	}
+	string speedString = "F" + to_string(this->speed*60);
+	string printSpeed = "F" + to_string(this->speed*30);
+	for (int i = 0; i < skirts.size(); i++){
+		Clipper2Lib::PathD path = skirts[i][0];
+		// go to start of path
+		file << "G0 " << speedString << " X" << path[0].x + bedCenterX << " Y" << path[0].y + bedCenterY << " Z" << height << "\n";
+		if (retracted){
+			extrudedLength += retractionLength;
+			retracted = false;
+		}
+		file << "G1 " << printSpeed << " E" << to_string(extrudedLength) << "\n";
+
+		//print the path
+		for (int k = 1; k < path.size(); k++){
+			double distance = glm::distance(glm::vec2(path[k].x, path[k].y), glm::vec2(path[k-1].x, path[k-1].y));
+			double E = distance * width * layerHeight / extrusionVal;
+			extrudedLength += E;
+			string extruded = " E" + to_string(extrudedLength);
+			file << "G1 " << printSpeed << " X" << path[k].x + bedCenterX << " Y" << path[k].y + bedCenterY << extruded << "\n";
+		}
+	}
+	//retract
+	if (retract && !retracted){
+		extrudedLength -= retractionLength;
+		retracted = true;
+		file << "G1 E" << to_string(extrudedLength) << " F" << to_string(retractionSpeed) << "\n";
+	}
+}
+
 
 void GCodeWriter::WriteShells(ofstream &file, vector<Clipper2Lib::PathsD> &shells, double height){
     string speedString = "F" + to_string(this->speed*60);
@@ -370,7 +407,7 @@ void GCodeWriter::WriteSurfaceWalls(ofstream &file, Clipper2Lib::PathsD &walls, 
 
 void GCodeWriter::WriteSurfaceInfill(ofstream &file, Clipper2Lib::PathsD &infill, double height){
     string speedString = "F" + to_string(this->speed*60);
-    string printSpeed = "F" + to_string(this->speed*60);
+    string printSpeed = "F" + to_string(this->speed*30);
     for (int i = 0; i < infill.size(); i++){
         Clipper2Lib::PathD path = infill[i];
         // go to start of path

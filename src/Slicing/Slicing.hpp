@@ -13,6 +13,7 @@ struct Slice
 {
     double height;
     Clipper2Lib::PathsD paths;
+    vector<Clipper2Lib::PathsD> skirt;
     Clipper2Lib::PathsD outerWall;
     Clipper2Lib::PathsD innerWall; //inner wall is a part of shell, but is not considered in the printing process, it is just the last shell, but it is easier to reference like this when clipping the infill
     std::vector<Clipper2Lib::PathsD> shells;
@@ -105,6 +106,17 @@ vector<Slice> Slicing::SliceModel(vector<Vertex> model, SlicerSettings settings)
 
         slices[i] = slice;
     }
+
+    
+
+    for (int i = 0; i < settings.GetSkirt().height; i++)
+	{
+        Slice skirtSlice = slices[0];
+        for (int j = 0; j < settings.GetSkirt().lines; j++) {
+            Clipper2Lib::PathsD skirtLine = Clipper2Lib::InflatePaths(skirtSlice.outerWall, settings.GetNozzleDiameter()*j + settings.GetSkirt().distance, Clipper2Lib::JoinType::Round, Clipper2Lib::EndType::Polygon);
+			slices[i].skirt.push_back(skirtLine);
+        }
+	}
 
     // calculate surfaces
     #pragma omp parallel for

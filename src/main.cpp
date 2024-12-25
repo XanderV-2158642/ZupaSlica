@@ -60,13 +60,6 @@ bool modelLoaded = false;
 
 int main()
 {
-    printf("Current working directory: ");
-    printf("%s\n", std::filesystem::current_path());
-
-    printf("Available files: \n");
-    for (const auto & entry : std::filesystem::directory_iterator(std::filesystem::current_path()))
-		std::cout << entry.path() << std::endl;
-
     //init nfd
     NFD_Init();
 
@@ -309,7 +302,7 @@ int main()
             if (ImGui::InputInt("Number of floors", &floors, 1, 1))
                 slicerSettings.SetFloors(floors);
 
-            if(ImGui::InputFloat("Infill percentage", &infillPercentage, 0.5f, 1.0f, "%.1f mm"))
+            if(ImGui::InputFloat("Infill percentage", &infillPercentage, 0.5f, 1.0f, "%.1f pct"))
                 slicerSettings.SetInfill(infillPercentage);
             
 
@@ -317,6 +310,22 @@ int main()
             int shownPlane = intersection.GetHeight();
             if(ImGui::SliderInt("Slicing plane height", &shownPlane, 0, intersection.GetMaxHeight()-1))
                 intersection.SetHeight(shownPlane);
+
+            Skirt skirt = slicerSettings.GetSkirt();
+            if (ImGui::Checkbox("Enable skirt", &skirt.enabled))
+				slicerSettings.SetSkirt(skirt);
+
+            if (skirt.enabled)
+			{
+				if (ImGui::InputInt("Skirt lines", &skirt.lines, 1, 1))
+					slicerSettings.SetSkirt(skirt);
+
+				if (ImGui::InputInt("Skirt height", &skirt.height, 1, 1))
+					slicerSettings.SetSkirt(skirt);
+
+                if (ImGui::InputDouble("Skirt distance", &skirt.distance, 0.1, 1.0, "%.2f mm"))
+                    slicerSettings.SetSkirt(skirt);
+			}
             
             
 
@@ -328,10 +337,10 @@ int main()
                 time(&end);
                 double dif = difftime(end, start);
                 printf("Elapsed time is %.2lf seconds.\n", dif);
-                //PathOptimization optimizer(sliceMap);
-                //optimizer.OptimizePaths();
-                //vector<Slice> optimizedSlices = optimizer.GetSlices();
-                intersection.SetSliceMap(sliceMap);
+                PathOptimization optimizer(sliceMap);
+                optimizer.OptimizePaths();
+                vector<Slice> optimizedSlices = optimizer.GetSlices();
+                intersection.SetSliceMap(optimizedSlices);
             }
 
             // button to export to gcode
@@ -486,7 +495,8 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 // ----------------------------------------------------------------------
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-    camera.ProcessMouseScroll(static_cast<float>(yoffset));
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
+        camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }
 
 Model LoadSTL(const char* path, glm::vec3& translation)

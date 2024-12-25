@@ -2,8 +2,8 @@
 
 
 ToDo:
-- Brim
+- Brim (check)
 - Zseam
-- Change surface print speed
-- File IO
-- Windows
+- Change surface print speed (check)
+- File IO (check)
+- Windows (check)

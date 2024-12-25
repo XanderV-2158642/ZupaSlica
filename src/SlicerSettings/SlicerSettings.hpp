@@ -8,6 +8,13 @@ struct BuildVolume
     float z;
 };
 
+struct Skirt {
+    bool enabled;
+    int lines;
+    int height;
+    double distance;
+};
+
 class SlicerSettings
 {
 private:
@@ -19,6 +26,7 @@ private:
     float infill; //percentage
     int roofs;
     int floors;
+    Skirt skirt;
 
 public:
     double GetSlicingPlaneHeight() { return slicingPlaneHeight; }
@@ -45,11 +53,14 @@ public:
     void SetBuildVolume(BuildVolume volume) { buildVolume = volume; }
     BuildVolume GetBuildVolume() { return buildVolume; }
 
+    void SetSkirt(Skirt skirt) { this->skirt = skirt; }
+    Skirt GetSkirt() { return skirt; }
+
     SlicerSettings();
     ~SlicerSettings();
 };
 
-SlicerSettings::SlicerSettings() : slicingPlaneHeight(0.000000001) , layerHeight(0.2f), nozzleDiameter(0.4f), shells(2), buildVolume({220,220,250}), infill(20), roofs(3), floors(3)
+SlicerSettings::SlicerSettings() : slicingPlaneHeight(0.000000001) , layerHeight(0.2f), nozzleDiameter(0.4f), shells(2), buildVolume({220,220,250}), infill(20), roofs(3), floors(3), skirt({false, 3, 2, 5})
 {
 }
 
