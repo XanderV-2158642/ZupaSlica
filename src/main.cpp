@@ -60,6 +60,13 @@ bool modelLoaded = false;
 
 int main()
 {
+    printf("Current working directory: ");
+    printf("%s\n", std::filesystem::current_path());
+
+    printf("Available files: \n");
+    for (const auto & entry : std::filesystem::directory_iterator(std::filesystem::current_path()))
+		std::cout << entry.path() << std::endl;
+
     //init nfd
     NFD_Init();
 
@@ -110,9 +117,9 @@ int main()
 
     // build and compile our shader program
     // ------------------------------------
-    Shader BuildplateShader("/home/xandervaes/Code/ZupaSlica/src/ShaderFiles/BuildplateShader.vs", "/home/xandervaes/Code/ZupaSlica/src/ShaderFiles/BuildplateShader.fs");
-    Shader slicingPlaneShader("/home/xandervaes/Code/ZupaSlica/src/ShaderFiles/SlicingPlaneShader.vs", "/home/xandervaes/Code/ZupaSlica/src/ShaderFiles/SlicingPlaneShader.fs");
-    Shader objectShader("/home/xandervaes/Code/ZupaSlica/src/ShaderFiles/ObjectShader.vs", "/home/xandervaes/Code/ZupaSlica/src/ShaderFiles/ObjectShader.fs");
+    Shader BuildplateShader("src/ShaderFiles/BuildplateShader.vs", "src/ShaderFiles/BuildplateShader.fs");
+    Shader slicingPlaneShader("src/ShaderFiles/SlicingPlaneShader.vs", "src/ShaderFiles/SlicingPlaneShader.fs");
+    Shader objectShader("src/ShaderFiles/ObjectShader.vs", "src/ShaderFiles/ObjectShader.fs");
 
 
     //Setup environment
@@ -123,7 +130,7 @@ int main()
 
     // load models
     // -----------
-    Model ourModel("/home/xandervaes/Code/ZupaSlica/other/hello.stl");
+    Model ourModel("other/hello.stl");
 
     // move vertices up by lowest point
     float lowest = DrawSTL::GetLowestPoint(ourModel);
@@ -321,10 +328,10 @@ int main()
                 time(&end);
                 double dif = difftime(end, start);
                 printf("Elapsed time is %.2lf seconds.\n", dif);
-                PathOptimization optimizer(sliceMap);
-                optimizer.OptimizePaths();
-                vector<Slice> optimizedSlices = optimizer.GetSlices();
-                intersection.SetSliceMap(optimizedSlices);
+                //PathOptimization optimizer(sliceMap);
+                //optimizer.OptimizePaths();
+                //vector<Slice> optimizedSlices = optimizer.GetSlices();
+                intersection.SetSliceMap(sliceMap);
             }
 
             // button to export to gcode
