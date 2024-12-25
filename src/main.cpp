@@ -24,11 +24,13 @@
 #include "Slicing/Infill/CreateInfill.hpp"
 #include <time.h>
 #include "PathOptimization/PathOptimization.hpp"
+#include <nfd.h>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+Model LoadSTL(const char* path, glm::vec3 &translation);
 
 // initial window dimensions
 unsigned int SCR_WIDTH = 1980;
@@ -54,9 +56,13 @@ float lastFrame = 0.0f;
 
 bool rescale = false;
 
+bool modelLoaded = false;
 
 int main()
 {
+    //init nfd
+    NFD_Init();
+
     // glfw: initialize and configure
     // ------------------------------
     glfwInit();
@@ -117,7 +123,7 @@ int main()
 
     // load models
     // -----------
-    Model ourModel("/home/xandervaes/Code/ZupaSlica/school_stuff/COFAB-models-set1/COFAB-models-set1/hole-test(easy).stl");
+    Model ourModel("/home/xandervaes/Code/ZupaSlica/other/hello.stl");
 
     // move vertices up by lowest point
     float lowest = DrawSTL::GetLowestPoint(ourModel);
@@ -195,7 +201,8 @@ int main()
         Buildplate::Draw(BuildplateShader, buildPlate, view, projection, camera);
 
         //object
-        DrawSTL::Draw(objectShader, ourModel, view, projection, camera, translation);
+        if (modelLoaded)
+            DrawSTL::Draw(objectShader, ourModel, view, projection, camera, translation);
 
         //slice plane (draw last because it is transparent)
         float height = intersection.GetSlicingPlaneHeight(slicerSettings.GetLayerHeight());
@@ -245,6 +252,30 @@ int main()
         // render your GUI
         ImGui::Begin("Inputs");
         {
+            if (ImGui::Button("Load STL")) {
+                nfdu8char_t *outPath;
+                nfdu8filteritem_t filters[1] = { { "STL file", "stl" } };
+                nfdopendialogu8args_t args = {0};
+                args.filterList = filters;
+                args.filterCount = 1;
+                nfdresult_t result = NFD_OpenDialogU8_With(&outPath, &args);
+                if (result == NFD_OKAY)
+                {
+                    puts("Success!");
+                    ourModel = LoadSTL(outPath, translation);
+                    NFD_FreePathU8(outPath);
+                }
+                else if (result == NFD_CANCEL)
+                {
+                    puts("User pressed cancel.");
+                }
+                else 
+                {
+                    printf("Error: %s\n", NFD_GetError());
+                }
+            }
+
+
             float layerHeight = slicerSettings.GetLayerHeight();
             float nozzleDiameter = slicerSettings.GetNozzleDiameter();
             int shells = slicerSettings.GetShells();
@@ -298,8 +329,28 @@ int main()
 
             // button to export to gcode
             if (ImGui::Button("Export to Gcode")) {
+                std::string outputDir = "/home/xandervaes/Code/ZupaSlica/GCodeOut";
+
+                nfdu8char_t *outPath;
+                nfdpickfolderu8args_t args = {0};
+                nfdresult_t result = NFD_PickFolderU8_With(&outPath, &args);
+                if (result == NFD_OKAY)
+                {
+                    puts("Success!");
+                    outputDir = std::string(outPath);
+                    NFD_FreePathU8(outPath);
+                }
+                else if (result == NFD_CANCEL)
+                {
+                    puts("User pressed cancel.");
+                }
+                else 
+                {
+                    printf("Error: %s\n", NFD_GetError());
+                }
+
                 vector<Slice> slices = intersection.GetSliceMap();
-                gcodeWriter.WriteGCode("/home/xandervaes/Code/ZupaSlica/GCodeOut", slices);
+                gcodeWriter.WriteGCode(outputDir, slices);
             }
         } 
         ImGui::End();
@@ -360,6 +411,8 @@ int main()
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
     glfwTerminate();
+
+    NFD_Quit();
     return 0;
 }
 
@@ -427,4 +480,22 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
     camera.ProcessMouseScroll(static_cast<float>(yoffset));
+}
+
+Model LoadSTL(const char* path, glm::vec3& translation)
+{
+    Model ourModel(path);
+    // move vertices up by lowest point
+    float lowest = DrawSTL::GetLowestPoint(ourModel);
+    glm::vec3 center = DrawSTL::GetXYCenterPoint(ourModel);
+    for (int i = 0; i < ourModel.meshes[0].vertices.size(); i++)
+    {
+        ourModel.meshes[0].vertices[i].Position.z -= lowest;
+        ourModel.meshes[0].vertices[i].Position.x -= center.x;
+        ourModel.meshes[0].vertices[i].Position.y -= center.y;
+    }
+
+    translation = glm::vec3(center.x, center.y, lowest);
+    modelLoaded = true;
+    return ourModel;
 }

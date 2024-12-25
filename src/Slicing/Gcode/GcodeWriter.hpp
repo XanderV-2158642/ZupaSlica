@@ -110,7 +110,7 @@ public:
 
     void WriteGCode(const char* dirname, vector<VertexLine> &lines);
     void WriteGCode(const char* dirname, Clipper2Lib::PathsD &paths);
-    void WriteGCode(const char* dirname, vector<Slice> &slices);
+    void WriteGCode(string dirname, vector<Slice> &slices);
 };
 
 void GCodeWriter::WriteGCode(const char* dirname, vector<VertexLine> &lines)
@@ -184,9 +184,9 @@ void GCodeWriter::WriteGCode(const char* dirname, Clipper2Lib::PathsD &paths)
     file << GCODE_FOOTER;
 }
 
-void GCodeWriter::WriteGCode(const char *dirname, vector<Slice> &slices) {
+void GCodeWriter::WriteGCode(string dirname, vector<Slice> &slices) {
     UpdateParams();
-    string filename = string(dirname) + "/output.gcode";
+    string filename = dirname + "/output.gcode";
 
     ofstream file;
     file.open(filename);

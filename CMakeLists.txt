@@ -13,11 +13,14 @@ link_directories(/usr/local/lib)
 link_directories(/home/xandervaes/dev/assimp/bin)
 
 
+add_subdirectory(src/libs/nativefiledialog-extended)
+
+
 
 
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
-set(LIBS PUBLIC glfw assimp OpenMP::OpenMP_CXX)
+set(LIBS PUBLIC glfw assimp OpenMP::OpenMP_CXX nfd)
 endif()
 
 
