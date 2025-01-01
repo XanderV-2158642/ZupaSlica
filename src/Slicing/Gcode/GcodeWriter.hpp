@@ -109,6 +109,14 @@ public:
         this->settings = &settings;
     }
 
+    void SetPrintSpeed(float speed){
+		this->speed = speed;
+	}
+
+    const float GetPrintSpeed(){
+        return this->speed;
+    }
+
     void WriteGCode(const char* dirname, vector<VertexLine> &lines);
     void WriteGCode(const char* dirname, Clipper2Lib::PathsD &paths);
     void WriteGCode(string dirname, vector<Slice> &slices);

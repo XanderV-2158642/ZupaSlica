@@ -276,12 +276,19 @@ int main()
             }
 
 
+            float printSpeed = gcodeWriter.GetPrintSpeed();
             float layerHeight = slicerSettings.GetLayerHeight();
             float nozzleDiameter = slicerSettings.GetNozzleDiameter();
             int shells = slicerSettings.GetShells();
             int roofs = slicerSettings.GetRoofs();
             int floors = slicerSettings.GetFloors();
             float infillPercentage = slicerSettings.GetInfill();
+            
+            //printspeed
+            if (ImGui::InputFloat("Print speed", &printSpeed, 1.0f, 10.0f, "%.0f mm/s"))
+                gcodeWriter.SetPrintSpeed(printSpeed);
+
+
             //layer height
             if(ImGui::InputFloat("Layer height", &layerHeight, 0.02f, 0.1f, "%.2f mm"))
                 slicerSettings.SetLayerHeight(layerHeight);
