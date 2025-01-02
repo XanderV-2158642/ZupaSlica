@@ -11,10 +11,7 @@
 const float DEFAULT_LAYER_HEIGHT = 0.2f;
 const float DEFAULT_WIDTH = 0.4f;
 
-const char* GCODE_HEADER = "M140 s60 ;set bed temperature \n"
-"M190 S60 ;wait for bed temperature to be reached \n"
-"M104 S200 ;set temperature \n"
-"M109 S200 ;wait for temperature to be reached \n"
+const char* GCODE_HEADER = 
 "M82 ;set extruder to absolute mode \n"
 "G28 ;home all axes \n"
 "G92 E0 ;zero the extruder \n"
@@ -32,7 +29,7 @@ const char* GCODE_HEADER = "M140 s60 ;set bed temperature \n"
 "G1 F2700 E-5 \n"
 "M107 ; fan off for first layer \n";
 
-const char* GCODE_FOOTER = "M140 s0 ;set bed temperature \n"
+const char* GCODE_FOOTER = "M140 S0 ;set bed temperature \n"
 "M107 ;fan off \n"
 "M220 S100 ;reset speed factor override percentage to default (100%) \n"
 "M221 S100 ;reset extrude factor override percentage to default (100%) \n"
@@ -71,6 +68,8 @@ private:
     double layerHeight = DEFAULT_LAYER_HEIGHT;
     double width = DEFAULT_WIDTH;
     float speed = 50.0f;
+    float bedTemp = 60.0f;
+    float extruderTemp = 200.0f;
 
     float bedCenterX = 110;
     float bedCenterY = 110;
@@ -115,6 +114,23 @@ public:
 
     const float GetPrintSpeed(){
         return this->speed;
+    }
+
+    void SetBedTemp(float temp){
+		this->bedTemp = temp;
+	}
+
+    const float GetBedTemp(){
+		return this->bedTemp;
+	}
+
+    void SetExtruderTemp(float temp) {
+        this->extruderTemp = temp;
+    }
+
+
+    const float GetExtruderTemp() {
+        return this->extruderTemp;
     }
 
     void WriteGCode(const char* dirname, vector<VertexLine> &lines);
@@ -199,6 +215,16 @@ void GCodeWriter::WriteGCode(string dirname, vector<Slice> &slices) {
 
     ofstream file;
     file.open(filename);
+
+    string bedTempString = "M140 S" + to_string(bedTemp) + " ;set bed temperature \n";
+    string waitBedTempString = "M190 S" + to_string(bedTemp) + " ;wait for bed temperature to be reached \n";
+    string extruderTempString = "M104 S" + to_string(extruderTemp) + " ;set temperature \n";
+    string waitExtruderTempString = "M109 S" + to_string(extruderTemp) + " ;wait for temperature to be reached \n";
+
+    file << bedTempString;
+    file << waitBedTempString;
+    file << extruderTempString;
+    file << waitExtruderTempString;
 
     file << GCODE_HEADER;
 
@@ -367,12 +393,13 @@ void GCodeWriter::WriteInfill(ofstream &file, Clipper2Lib::PathsD &infill, doubl
             string extruded = " E" + to_string(extrudedLength);
             file << "G1 " << printSpeed << " X" << path[k].x + bedCenterX << " Y" << path[k].y + bedCenterY << extruded << "\n";
         }
-    }
-    //retract
-    if (retract && !retracted){
-        extrudedLength -= retractionLength;
-        retracted = true;
-        file << "G1 E" << to_string(extrudedLength) << " F" << to_string(retractionSpeed) << "\n";
+
+        //retract
+        if (retract && !retracted){
+            extrudedLength -= retractionLength;
+            retracted = true;
+            file << "G1 E" << to_string(extrudedLength) << " F" << to_string(retractionSpeed) << "\n";
+        }
     }
 }
 
@@ -434,6 +461,18 @@ void GCodeWriter::WriteSurfaceInfill(ofstream &file, Clipper2Lib::PathsD &infill
             string extruded = " E" + to_string(extrudedLength);
             file << "G1 " << printSpeed << " X" << path[k].x + bedCenterX << " Y" << path[k].y + bedCenterY << extruded << "\n";
         }
+
+        // if the distance to next path is too large, retract
+        if (i < infill.size() - 1){
+			double distance = glm::distance(glm::vec2(path[path.size()-1].x, path[path.size()-1].y), glm::vec2(infill[i+1][0].x, infill[i+1][0].y));
+			if (distance > settings->GetNozzleDiameter()*2){
+				if (retract && !retracted){
+					extrudedLength -= retractionLength;
+					retracted = true;
+					file << "G1 E" << to_string(extrudedLength) << " F" << to_string(retractionSpeed) << "\n";
+				}
+			}
+		}
     }
     if (retract && !retracted){
         extrudedLength -= retractionLength;

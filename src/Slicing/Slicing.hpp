@@ -33,7 +33,7 @@ public:
 
 vector<Slice> Slicing::SliceModel(vector<Vertex> model, SlicerSettings settings) {
     float layerHeight = settings.GetLayerHeight();
-    settings.SetSlicingPlaneHeight(layerHeight/2);
+    settings.SetSlicingPlaneHeight(layerHeight / 2);
 
     CreateInfill infillCreator;
 
@@ -45,7 +45,7 @@ vector<Slice> Slicing::SliceModel(vector<Vertex> model, SlicerSettings settings)
 
     vector<Slice> slices;
     bool nonEmpty = true;
-    #pragma omp parallel
+#pragma omp parallel
     while (nonEmpty)
     {
         double intersectionHeight = settings.GetSlicingPlaneHeight();
@@ -61,7 +61,7 @@ vector<Slice> Slicing::SliceModel(vector<Vertex> model, SlicerSettings settings)
             Slice slice;
             slice.height = intersectionHeight;
             slice.paths = paths;
-            #pragma omp critical
+#pragma omp critical
             slices.push_back(slice);
         }
     }
@@ -69,15 +69,15 @@ vector<Slice> Slicing::SliceModel(vector<Vertex> model, SlicerSettings settings)
     //sort slices by height
     std::sort(slices.begin(), slices.end(), [](Slice a, Slice b) {
         return a.height < b.height;
-    });
+        });
 
     //remove duplicates -> remove slices with the same height
     slices.erase(std::unique(slices.begin(), slices.end(), [](Slice a, Slice b) {
         return a.height == b.height;
-    }), slices.end());
+        }), slices.end());
 
-    #pragma omp parallel for
-    for (int i = 0 ; i < slices.size(); i++) {
+#pragma omp parallel for
+    for (int i = 0; i < slices.size(); i++) {
         Slice slice = slices[i];
         Clipper2Lib::PathsD paths = slice.paths;
         //erode outerWall by half the nozzle diameter
@@ -85,15 +85,15 @@ vector<Slice> Slicing::SliceModel(vector<Vertex> model, SlicerSettings settings)
         paths = Clipper2Lib::SimplifyPaths(paths, 0.00125);
         slice.outerWall = paths;
         slice.innerWall = paths;
-        
+
 
         //add inner shells
         std::vector<Clipper2Lib::PathsD> shells;
         Clipper2Lib::PathsD lastPaths = paths;
-        for (int i = 0; i < settings.GetShells()-1; i++)
+        for (int i = 0; i < settings.GetShells() - 1; i++)
         {
             Clipper2Lib::PathsD shellPaths = Clipper2Lib::InflatePaths(lastPaths, -settings.GetNozzleDiameter(), Clipper2Lib::JoinType::Miter, Clipper2Lib::EndType::Polygon);
-            shellPaths = Clipper2Lib::SimplifyPaths(shellPaths, 0.00125); 
+            shellPaths = Clipper2Lib::SimplifyPaths(shellPaths, 0.00125);
             lastPaths = shellPaths;
             shells.push_back(shellPaths);
         }
@@ -101,22 +101,23 @@ vector<Slice> Slicing::SliceModel(vector<Vertex> model, SlicerSettings settings)
 
         //set inner wall
         slice.innerWall = lastPaths;
-        
+
         slice.infill = Clipper2Lib::PathsD();
 
         slices[i] = slice;
     }
 
-    
 
-    for (int i = 0; i < settings.GetSkirt().height; i++)
-	{
-        Slice skirtSlice = slices[0];
-        for (int j = 0; j < settings.GetSkirt().lines; j++) {
-            Clipper2Lib::PathsD skirtLine = Clipper2Lib::InflatePaths(skirtSlice.outerWall, settings.GetNozzleDiameter()*j + settings.GetSkirt().distance, Clipper2Lib::JoinType::Round, Clipper2Lib::EndType::Polygon);
-			slices[i].skirt.push_back(skirtLine);
+    if (settings.GetSkirt().enabled) {
+        for (int i = 0; i < settings.GetSkirt().height; i++)
+        {
+            Slice skirtSlice = slices[0];
+            for (int j = 0; j < settings.GetSkirt().lines; j++) {
+                Clipper2Lib::PathsD skirtLine = Clipper2Lib::InflatePaths(skirtSlice.outerWall, settings.GetNozzleDiameter() * j + settings.GetSkirt().distance, Clipper2Lib::JoinType::Round, Clipper2Lib::EndType::Polygon);
+                slices[i].skirt.push_back(skirtLine);
+            }
         }
-	}
+    }
 
     // calculate surfaces
     #pragma omp parallel for

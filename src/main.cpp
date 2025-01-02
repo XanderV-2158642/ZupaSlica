@@ -277,6 +277,8 @@ int main()
 
 
             float printSpeed = gcodeWriter.GetPrintSpeed();
+            float bedTemperature = gcodeWriter.GetBedTemp();
+            float nozzleTemperature = gcodeWriter.GetExtruderTemp();
             float layerHeight = slicerSettings.GetLayerHeight();
             float nozzleDiameter = slicerSettings.GetNozzleDiameter();
             int shells = slicerSettings.GetShells();
@@ -285,8 +287,14 @@ int main()
             float infillPercentage = slicerSettings.GetInfill();
             
             //printspeed
-            if (ImGui::InputFloat("Print speed", &printSpeed, 1.0f, 10.0f, "%.0f mm/s"))
+            if(ImGui::InputFloat("Print speed", &printSpeed, 1.0f, 10.0f, "%.0f mm/s"))
                 gcodeWriter.SetPrintSpeed(printSpeed);
+
+            if (ImGui::InputFloat("Bed temperature", &bedTemperature, 1.0f, 10.0f, "%.0f C"))
+				gcodeWriter.SetBedTemp(bedTemperature);
+
+            if (ImGui::InputFloat("Nozzle temperature", &nozzleTemperature, 1.0f, 10.0f, "%.0f C"))
+                gcodeWriter.SetExtruderTemp(nozzleTemperature);
 
 
             //layer height
