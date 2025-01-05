@@ -319,12 +319,6 @@ int main()
 
             if(ImGui::InputFloat("Infill percentage", &infillPercentage, 0.5f, 1.0f, "%.1f pct"))
                 slicerSettings.SetInfill(infillPercentage);
-            
-
-            //slicing plane height
-            int shownPlane = intersection.GetHeight();
-            if(ImGui::SliderInt("Slicing plane height", &shownPlane, 0, intersection.GetMaxHeight()-1))
-                intersection.SetHeight(shownPlane);
 
             Skirt skirt = slicerSettings.GetSkirt();
             if (ImGui::Checkbox("Enable skirt", &skirt.enabled))
@@ -357,6 +351,11 @@ int main()
                 vector<Slice> optimizedSlices = optimizer.GetSlices();
                 intersection.SetSliceMap(optimizedSlices);
             }
+
+            //slicing plane height
+            int shownPlane = intersection.GetHeight();
+            if (ImGui::SliderInt("Slicing plane height", &shownPlane, 0, intersection.GetMaxHeight() - 1))
+                intersection.SetHeight(shownPlane);
 
             // button to export to gcode
             if (ImGui::Button("Export to Gcode")) {
